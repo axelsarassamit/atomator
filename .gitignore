@@ -4,6 +4,14 @@ mac_addresses.txt
 wallpapers.txt
 version.txt
 
+# Report files (generated on the server)
+hardware_info_*.txt
+ram_info_*.txt
+speedtest_results_*.txt
+disk_space_*.txt
+uptime_*.txt
+services_*.txt
+
 # Backups
 *.backup
 *.bak

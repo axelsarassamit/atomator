@@ -21,17 +21,17 @@ That's it. All 34 scripts are installed to `/remote_tools/`, ready to use.
 - [Requirements](#requirements)
 - [Installation](#installation)
 - [How It Works](#how-it-works)
-- [Menu Overview](#menu-overview)
+- [Menu Navigation](#menu-navigation)
 - [Scripts Reference](#scripts-reference)
-  - [System Updates (1-3)](#system-updates)
-  - [System Maintenance (4-6)](#system-maintenance)
-  - [Network (7-15)](#network)
-  - [Information (16-20)](#information)
-  - [Software (21-25)](#software)
-  - [Configuration (26-27)](#configuration)
-  - [Tools (28-29)](#tools)
-  - [File Management (30-32)](#file-management)
-  - [Update (33)](#update)
+  - [System Updates & Maintenance](#1-system-updates--maintenance)
+  - [Network](#2-network)
+  - [Information & Reports](#3-information--reports)
+  - [Software](#4-software)
+  - [Configuration](#5-configuration)
+  - [Tools](#6-tools)
+  - [File Management](#7-file-management)
+  - [Update Scripts](#8-update-scripts)
+- [Report Viewers](#report-viewers)
 - [Managing Hosts](#managing-hosts)
 - [Updating](#updating)
 - [File Structure](#file-structure)
@@ -75,13 +75,13 @@ sudo bash quick_install.sh
 
 ```bash
 bash /root/start.sh
-# Choose option 30 (Manage hosts.txt) or option 32 (Edit hosts.txt)
+# Main menu -> 7. File Management -> 1. Manage hosts.txt
 ```
 
 4. Test connectivity:
 
 ```bash
-# Choose option 7 (Check host status)
+# Main menu -> 2. Network -> 1. Check host status
 ```
 
 ### What the Installer Does
@@ -89,7 +89,7 @@ bash /root/start.sh
 - Creates `/remote_tools/` directory
 - Installs required packages (sshpass, wakeonlan, bc, curl)
 - Generates all 34 management scripts
-- Creates the interactive menu (`menu.sh`)
+- Creates the interactive menu (`menu.sh`) with submenus
 - Creates `/root/start.sh` for quick launch
 - Creates `version.txt` with version number and install date
 - Creates `update_vX.X.X.sh` for future re-installs
@@ -105,116 +105,151 @@ Every script follows the same pattern:
 1. Reads IP addresses from `hosts.txt`
 2. Connects to each host via SSH using the `sweetagent` account
 3. Runs commands with sudo on the remote machine
-4. Reports `[IP] OK` or `[IP] FAILED` for each host
+4. Reports success or failure for each host
 5. Continues to the next host even if one fails
-
-**Connection method:**
-```
-sshpass -> SSH -> sweetagent@host -> sudo -> command
-```
 
 Lines starting with `#` in `hosts.txt` are ignored (comments). Empty lines are skipped.
 
 ---
 
-## Menu Overview
+## Menu Navigation
 
-Start the menu with:
+Start the menu:
 ```bash
 bash /root/start.sh
 # or
 cd /remote_tools && bash menu.sh
 ```
 
-The menu shows:
+The menu uses a **category-based submenu system**:
+
+```
+Main Menu
+├── 1. System Updates & Maintenance  (6 options)
+├── 2. Network                       (11 options)
+├── 3. Information & Reports         (10 options)
+├── 4. Software                      (5 options)
+├── 5. Configuration                 (2 options)
+├── 6. Tools                         (2 options)
+├── 7. File Management               (3 options)
+├── 8. Update Scripts
+└── 0. Exit
+```
+
+Select a category by number, then choose an option from the submenu. Press `0` to go back to the main menu from any submenu.
+
+The menu header shows:
 - Current version number
 - Number of hosts loaded from `hosts.txt`
 - Install date
-- All options organized by category
-
-Choose an option by typing its number and pressing Enter.
 
 ---
 
 ## Scripts Reference
 
-### System Updates
+### 1. System Updates & Maintenance
 
 | # | Script | Description |
 |---|--------|-------------|
 | 1 | `update_all.sh` | Runs `apt update`, `apt upgrade`, `autoremove` and `autoclean` on every host. Uses non-interactive mode to avoid prompts. Keeps existing config files when packages ask. |
 | 2 | `update_and_remove_all.sh` | Same as option 1, but also purges old kernel packages to free disk space. |
 | 3 | `disable_auto_updates.sh` | Stops and disables `unattended-upgrades` and all APT timers. Removes the unattended-upgrades package. Prevents systems from updating themselves unexpectedly. |
-
-### System Maintenance
-
-| # | Script | Description |
-|---|--------|-------------|
 | 4 | `cleanup_all.sh` | Cleans APT cache, old journal logs (keeps 7 days), temp files older than 7 days, user trash and thumbnail cache. |
-| 5 | `reboot.sh` | Reboots all hosts. **Asks for confirmation** before sending the command. |
-| 6 | `shutdown_all.sh` | Shuts down all hosts. **Asks for confirmation** before sending the command. |
+| 5 | `reboot.sh` | Reboots all hosts. Asks for confirmation before sending the command. |
+| 6 | `shutdown_all.sh` | Shuts down all hosts. Asks for confirmation before sending the command. |
 
-### Network
-
-| # | Script | Description |
-|---|--------|-------------|
-| 7 | `check_hosts.sh` | Pings every host and shows **ONLINE** (green) or **OFFLINE** (red). Shows totals at the end. Does not require SSH. |
-| 8 | `wol_all.sh` | Sends Wake-on-LAN magic packets to wake up powered-off computers. Reads MAC addresses from `mac_addresses.txt`. Sends 3 packets per host for reliability. Run `collect_mac_addresses.sh` first. |
-| 9 | `collect_mac_addresses.sh` | Connects to each host, reads the MAC address of the primary ethernet interface, and saves it to `mac_addresses.txt`. Required before using Wake-on-LAN. |
-| 10 | `change_dns.sh` | Sets DNS servers to Cloudflare (1.1.1.1), Google (8.8.8.8), and Quad9 (9.9.9.9) on all hosts. Disables auto-DNS from DHCP. Uses NetworkManager. |
-| 11 | `fix_static_ip.sh` | Reads the current DHCP-assigned IP and converts it to a permanent static IP. Keeps the same address, gateway and DNS. Uses NetworkManager. |
-| 12 | `remove_vpn_reset_network.sh` | Removes all VPN packages (OpenVPN, WireGuard, etc.), deletes VPN connections, cleans config files, and sets the current IP as static. Full network reset. |
-| 13 | `require_sudo_network.sh` | Installs a polkit rule that requires a sudo password to change any network settings. Prevents users from modifying network configuration. |
-| 14 | `speedtest_all.sh` | Installs `speedtest-cli` if missing, then runs a speed test on every host. Saves results with timestamps to a file. |
-| 15 | `disable_wifi.sh` | Permanently disables WiFi: turns off radio, blocks with rfkill, blacklists common WiFi kernel modules, and configures NetworkManager to ignore WiFi devices. |
-
-### Information
+### 2. Network
 
 | # | Script | Description |
 |---|--------|-------------|
-| 16 | `collect_hardware_info.sh` | Collects hostname, manufacturer, model, serial number, CPU, core count, RAM, disk size, OS version, kernel, and uptime from every host. Saves to a timestamped report file. |
-| 17 | `collect_ram_info.sh` | Collects detailed RAM information (total, used, free) from every host. Shows a summary with total RAM across all hosts and average per host. Saves to a timestamped report file. |
-| 18 | `check_disk_space.sh` | Shows disk usage percentage for every host with color coding: **green** (under 80%), **yellow** (80-90% WARNING), **red** (over 90% CRITICAL). Quick way to find hosts running out of space. |
-| 19 | `check_uptime.sh` | Shows how long each host has been running and when it was last booted. |
-| 20 | `check_services.sh` | Checks if key services are running on every host: SSH, NetworkManager, cron, and rsyslog. Shows OK or FAIL for each service. |
+| 1 | `check_hosts.sh` | Pings every host and shows ONLINE (green) or OFFLINE (red). Shows totals at the end. Does not require SSH. |
+| 2 | `wol_all.sh` | Sends Wake-on-LAN magic packets to wake up powered-off computers. Reads MAC addresses from `mac_addresses.txt`. Sends 3 packets per host. Run `collect_mac_addresses.sh` first. |
+| 3 | `collect_mac_addresses.sh` | Connects to each host, reads the MAC address of the primary ethernet interface, and saves it to `mac_addresses.txt`. Required before using Wake-on-LAN. |
+| 4 | View MAC addresses | Displays the contents of `mac_addresses.txt`. |
+| 5 | `change_dns.sh` | Sets DNS servers to Cloudflare (1.1.1.1), Google (8.8.8.8), and Quad9 (9.9.9.9) on all hosts. Disables auto-DNS from DHCP. Uses NetworkManager. |
+| 6 | `fix_static_ip.sh` | Reads the current DHCP-assigned IP and converts it to a permanent static IP. Keeps the same address, gateway and DNS. Uses NetworkManager. |
+| 7 | `remove_vpn_reset_network.sh` | Removes all VPN packages (OpenVPN, WireGuard, etc.), deletes VPN connections, cleans config files, and sets the current IP as static. Full network reset. |
+| 8 | `require_sudo_network.sh` | Installs a polkit rule that requires a sudo password to change any network settings. Prevents users from modifying network configuration. |
+| 9 | `speedtest_all.sh` | Installs `speedtest-cli` if missing, then runs a speed test on every host. Saves results with timestamps to a file. |
+| 10 | View latest speed test | Displays the most recent speed test results file. |
+| 11 | `disable_wifi.sh` | Permanently disables WiFi: turns off radio, blocks with rfkill, blacklists common WiFi kernel modules, and configures NetworkManager to ignore WiFi devices. |
 
-### Software
+### 3. Information & Reports
 
-| # | Script | Description |
-|---|--------|-------------|
-| 21 | `install_firefox.sh` | Installs Firefox (or Firefox ESR as fallback) and creates a desktop shortcut for all users. |
-| 22 | `uninstall_firefox.sh` | Removes Firefox and locale packages. User profiles in `~/.mozilla` are kept. |
-| 23 | `install_hostname_display.sh` | Installs Conky and creates a configuration that displays the computer's hostname in the bottom-right corner of the desktop. Auto-starts on login. Useful for identifying which computer you're looking at. |
-| 24 | `install_wine.sh` | Installs Wine (32-bit and 64-bit) and Winetricks for running Windows .exe files. |
-| 25 | `remove_wine.sh` | Removes Wine packages and deletes all `~/.wine` directories. |
-
-### Configuration
+Each data collection script saves results to a timestamped file. Use the "View latest" option to see the most recent report without re-running the collection.
 
 | # | Script | Description |
 |---|--------|-------------|
-| 26 | `set_wallpaper.sh` | Picks a random URL from `wallpapers.txt`, downloads the image, and sets it as wallpaper for all users on all hosts. Works with XFCE desktop. Create a `wallpapers.txt` file with one image URL per line. |
-| 27 | `restrict_chromium_cpu.sh` | Installs `cpulimit` and creates a systemd service that limits all Chromium processes to 50% CPU. Prevents Chromium from eating all system resources. Starts automatically on boot. |
+| 1 | `collect_hardware_info.sh` | Collects hostname, manufacturer, model, serial number, CPU, core count, RAM, disk size, OS version, kernel, and uptime from every host. Saves to `hardware_info_YYYYMMDD_HHMMSS.txt`. |
+| 2 | View latest hardware report | Displays the most recent hardware info file. |
+| 3 | `collect_ram_info.sh` | Collects detailed RAM information (total, used, free) from every host. Shows a summary with totals and averages. Saves to `ram_info_YYYYMMDD_HHMMSS.txt`. |
+| 4 | View latest RAM report | Displays the most recent RAM info file. |
+| 5 | `check_disk_space.sh` | Shows disk usage percentage for every host with color coding: green (under 80%), yellow (80-90% WARNING), red (over 90% CRITICAL). Saves to `disk_space_YYYYMMDD_HHMMSS.txt`. |
+| 6 | View latest disk report | Displays the most recent disk space file. |
+| 7 | `check_uptime.sh` | Shows how long each host has been running and when it was last booted. Saves to `uptime_YYYYMMDD_HHMMSS.txt`. |
+| 8 | View latest uptime report | Displays the most recent uptime file. |
+| 9 | `check_services.sh` | Checks if key services are running on every host: SSH, NetworkManager, cron, and rsyslog. Shows OK or FAIL for each service. Saves to `services_YYYYMMDD_HHMMSS.txt`. |
+| 10 | View latest services report | Displays the most recent services file. |
 
-### Tools
-
-| # | Script | Description |
-|---|--------|-------------|
-| 28 | `run_remote_command.sh` | Prompts you for a command, then runs it as root on every host. Full output is shown for each host. Use this for one-off commands you don't have a script for. |
-| 29 | `delete_ssh_keys.sh` | Deletes all SSH keys for all users and root, clears known_hosts and authorized_keys, then regenerates the host keys. **Asks for confirmation.** |
-
-### File Management
-
-| # | Script | Description |
-|---|--------|-------------|
-| 30 | `manage_hosts.sh` | Interactive submenu for managing `hosts.txt`: fill with an IP range, add/remove individual hosts, remove duplicates, sort, count, or restore from backup. |
-| 31 | View hosts.txt | Displays the contents of `hosts.txt` with line numbers. |
-| 32 | Edit hosts.txt | Opens `hosts.txt` in nano (or your default editor). |
-
-### Update
+### 4. Software
 
 | # | Script | Description |
 |---|--------|-------------|
-| 33 | `update.sh` | Updates the installation to a new version. Looks for an `update_vX.X.X.sh` file in `/remote_tools/`, shows current vs new version, backs up your config files, runs the installer, and restores configs if needed. See [Updating](#updating). |
+| 1 | `install_firefox.sh` | Installs Firefox (or Firefox ESR as fallback) and creates a desktop shortcut for all users. |
+| 2 | `uninstall_firefox.sh` | Removes Firefox and locale packages. User profiles in `~/.mozilla` are kept. |
+| 3 | `install_hostname_display.sh` | Installs Conky and creates a configuration that displays the computer's hostname in the bottom-right corner of the desktop. Auto-starts on login. Useful for identifying which computer you're looking at. |
+| 4 | `install_wine.sh` | Installs Wine (32-bit and 64-bit) and Winetricks for running Windows .exe files. |
+| 5 | `remove_wine.sh` | Removes Wine packages and deletes all `~/.wine` directories. |
+
+### 5. Configuration
+
+| # | Script | Description |
+|---|--------|-------------|
+| 1 | `set_wallpaper.sh` | Picks a random URL from `wallpapers.txt`, downloads the image, and sets it as wallpaper for all users on all hosts. Works with XFCE desktop. Create a `wallpapers.txt` file with one image URL per line. |
+| 2 | `restrict_chromium_cpu.sh` | Installs `cpulimit` and creates a systemd service that limits all Chromium processes to 50% CPU. Prevents Chromium from eating all system resources. Starts automatically on boot. |
+
+### 6. Tools
+
+| # | Script | Description |
+|---|--------|-------------|
+| 1 | `run_remote_command.sh` | Prompts you for a command, then runs it as root on every host. Full output is shown for each host. Use this for one-off commands you don't have a script for. |
+| 2 | `delete_ssh_keys.sh` | Deletes all SSH keys for all users and root on **this server only** (not remote hosts). Clears known_hosts and authorized_keys, then regenerates the host keys. Asks for confirmation. |
+
+### 7. File Management
+
+| # | Option | Description |
+|---|--------|-------------|
+| 1 | Manage hosts.txt | Interactive submenu: fill with an IP range, add/remove individual hosts, remove duplicates, sort, count, or restore from backup. |
+| 2 | View hosts.txt | Displays the contents of `hosts.txt` with line numbers. |
+| 3 | Edit hosts.txt | Opens `hosts.txt` in nano (or your default editor). |
+
+### 8. Update Scripts
+
+Runs `update.sh` which gives you two options:
+1. **Update from local file** - Uses an `update_vX.X.X.sh` file already in `/remote_tools/`
+2. **Download latest from GitHub** - Downloads the latest version directly from the repository
+
+See [Updating](#updating) for details.
+
+---
+
+## Report Viewers
+
+Several scripts generate timestamped report files when they run. Instead of re-running a collection (which takes time connecting to every host), you can instantly view the latest report from the menu.
+
+**Reports available:**
+
+| Report | File Pattern | Menu Location |
+|--------|-------------|---------------|
+| Hardware info | `hardware_info_*.txt` | Information & Reports → 2 |
+| RAM info | `ram_info_*.txt` | Information & Reports → 4 |
+| Disk space | `disk_space_*.txt` | Information & Reports → 6 |
+| Uptime | `uptime_*.txt` | Information & Reports → 8 |
+| Services | `services_*.txt` | Information & Reports → 10 |
+| MAC addresses | `mac_addresses.txt` | Network → 4 |
+| Speed test | `speedtest_results_*.txt` | Network → 10 |
+
+Report files accumulate over time. Old reports are not automatically deleted. You can remove them manually if needed.
 
 ---
 
@@ -237,23 +272,23 @@ One IP address per line. Lines starting with `#` are comments and ignored:
 
 ### Adding Hosts
 
-**Option A** - Fill a range (menu option 30):
+**Option A** - Fill a range (Main menu → File Management → Manage hosts.txt):
 ```
 Enter IP range (e.g. 192.168.1.50-199): 192.168.1.50-75
 ```
 This creates 26 entries from 192.168.1.50 to 192.168.1.75.
 
-**Option B** - Edit manually (menu option 32):
+**Option B** - Edit manually (Main menu → File Management → Edit hosts.txt):
 Opens the file in nano where you can type IPs directly.
 
-**Option C** - Add one at a time (menu option 30, then sub-option 3):
+**Option C** - Add one at a time (Main menu → File Management → Manage hosts.txt → Add host):
 ```
 IP to add: 192.168.1.200
 ```
 
 ### Verifying Hosts
 
-After adding hosts, use option 7 (Check host status) to see which are online and reachable.
+After adding hosts, use Network → Check host status to see which are online and reachable.
 
 ---
 
@@ -261,16 +296,30 @@ After adding hosts, use option 7 (Check host status) to see which are online and
 
 ### How to Update
 
-1. **Get the new version**: Download or receive the new `quick_install.sh`
-2. **Rename it** with the version number:
+**Option 1: Download from GitHub (recommended)**
+
+1. Open the menu: `bash /root/start.sh`
+2. Choose option **8** (Update Scripts)
+3. Choose option **2** (Download latest from GitHub)
+4. Review the version comparison and confirm
+
+Or run directly:
+```bash
+cd /remote_tools && sudo bash update.sh
+```
+
+**Option 2: Update from local file**
+
+1. Get the new `quick_install.sh`
+2. Rename it with the version number:
    ```bash
-   mv quick_install.sh update_v1.1.0.sh
+   mv quick_install.sh update_v2.1.0.sh
    ```
-3. **Copy it to the server**:
+3. Copy it to the server:
    ```bash
-   scp update_v1.1.0.sh root@your-server:/remote_tools/
+   scp update_v2.1.0.sh root@your-server:/remote_tools/
    ```
-4. **Run the update** from the menu (option 33) or directly:
+4. Run the update from the menu (option 8) or directly:
    ```bash
    cd /remote_tools && sudo bash update.sh
    ```
@@ -278,8 +327,8 @@ After adding hosts, use option 7 (Check host status) to see which are online and
 ### What Happens During Update
 
 1. Shows your current version and install date
-2. Detects the new version from the filename
-3. Asks for confirmation
+2. Lets you choose local file or GitHub download
+3. Shows version comparison and asks for confirmation
 4. Backs up `hosts.txt`, `mac_addresses.txt`, and `wallpapers.txt`
 5. Runs the new installer (overwrites all scripts)
 6. Restores config files if they were lost
@@ -288,7 +337,7 @@ After adding hosts, use option 7 (Check host status) to see which are online and
 ### Version Tracking
 
 The file `version.txt` in `/remote_tools/` contains:
-- Line 1: Version number (e.g. `1.0.0`)
+- Line 1: Version number (e.g. `2.0.0`)
 - Line 2: Install date and time
 
 The menu header always shows the current version and install date.
@@ -311,43 +360,42 @@ After installation, `/remote_tools/` contains:
 ```
 /remote_tools/
   hosts.txt                        # Your target IPs (created on first install)
-  mac_addresses.txt                # Collected MAC addresses (after running option 9)
+  mac_addresses.txt                # Collected MAC addresses (after running collection)
   wallpapers.txt                   # Wallpaper URLs (create manually)
   version.txt                      # Current version + install date
-  menu.sh                          # Interactive menu
-  update.sh                        # Update script
-  update_v1.0.0.sh                 # Install file (kept for re-installs)
-  update_all.sh                    # Script 1
-  update_and_remove_all.sh         # Script 2
-  disable_auto_updates.sh          # Script 3
-  cleanup_all.sh                   # Script 4
-  reboot.sh                        # Script 5
-  shutdown_all.sh                  # Script 6
-  check_hosts.sh                   # Script 7
-  wol_all.sh                       # Script 8
-  collect_mac_addresses.sh         # Script 9
-  change_dns.sh                    # Script 10
-  fix_static_ip.sh                 # Script 11
-  remove_vpn_reset_network.sh      # Script 12
-  require_sudo_network.sh          # Script 13
-  speedtest_all.sh                 # Script 14
-  disable_wifi.sh                  # Script 15
-  collect_hardware_info.sh         # Script 16
-  collect_ram_info.sh              # Script 17
-  check_disk_space.sh              # Script 18
-  install_firefox.sh               # Script 19/21
-  uninstall_firefox.sh             # Script 20/22
-  install_hostname_display.sh      # Script 23
-  install_wine.sh                  # Script 24
-  remove_wine.sh                   # Script 25
-  set_wallpaper.sh                 # Script 26
-  restrict_chromium_cpu.sh         # Script 27
-  run_remote_command.sh            # Script 28
-  delete_ssh_keys.sh               # Script 29
-  manage_hosts.sh                  # Script 30
-  install_connectivity_watchdog.sh # Watchdog install
-  remove_connectivity_watchdog.sh  # Watchdog remove
-  check_watchdog_status.sh         # Watchdog status
+  menu.sh                          # Interactive menu with submenus
+  update.sh                        # Update script (local + GitHub)
+  update_v2.0.0.sh                 # Install file (kept for re-installs)
+  update_all.sh                    # System update
+  update_and_remove_all.sh         # System update + kernel cleanup
+  disable_auto_updates.sh          # Disable unattended-upgrades
+  cleanup_all.sh                   # System cleanup
+  reboot.sh                        # Reboot all hosts
+  shutdown_all.sh                  # Shutdown all hosts
+  check_hosts.sh                   # Ping all hosts
+  wol_all.sh                       # Wake-on-LAN
+  collect_mac_addresses.sh         # Collect MAC addresses
+  change_dns.sh                    # Change DNS servers
+  fix_static_ip.sh                 # Fix static IP
+  remove_vpn_reset_network.sh      # Remove VPN + reset network
+  require_sudo_network.sh          # Lock network settings
+  speedtest_all.sh                 # Speed test all hosts
+  disable_wifi.sh                  # Disable WiFi
+  collect_hardware_info.sh         # Collect hardware info
+  collect_ram_info.sh              # Collect RAM info
+  check_disk_space.sh              # Check disk space
+  check_uptime.sh                  # Check uptime
+  check_services.sh                # Check services
+  install_firefox.sh               # Install Firefox
+  uninstall_firefox.sh             # Uninstall Firefox
+  install_hostname_display.sh      # Install hostname display
+  install_wine.sh                  # Install Wine
+  remove_wine.sh                   # Remove Wine
+  set_wallpaper.sh                 # Set wallpaper
+  restrict_chromium_cpu.sh         # Restrict Chromium CPU
+  run_remote_command.sh            # Run custom command
+  delete_ssh_keys.sh               # Delete SSH keys (local)
+  manage_hosts.sh                  # Manage hosts.txt
 
 /root/
   start.sh                         # Quick launcher: cd /remote_tools && bash menu.sh
@@ -359,4 +407,5 @@ After installation, `/remote_tools/` contains:
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 2.0.0 | 2026-02-23 | Submenu system (8 categories), report viewers for all data collectors, GitHub update support, delete SSH keys now local-only, timestamped output files for disk/uptime/services scripts. |
 | 1.0.0 | 2026-02-23 | Complete rewrite. 34 scripts, new menu with descriptions, version system, update mechanism. Added shutdown, disk space, uptime, services scripts. Consistent error handling across all scripts. |
