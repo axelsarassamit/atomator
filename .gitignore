@@ -1,0 +1,15 @@
+# Config files with real IPs/data (add your own after install)
+hosts.txt
+mac_addresses.txt
+wallpapers.txt
+version.txt
+
+# Backups
+*.backup
+*.bak
+
+# Archives
+*.tar.gz
+
+# OS files
+.DS_Store

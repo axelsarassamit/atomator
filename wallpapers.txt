@@ -1,4 +1,0 @@
-# Add wallpaper URLs here, one per line
-# Example:
-# https://example.com/image1.jpg
-# https://example.com/image2.png

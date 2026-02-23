@@ -1174,15 +1174,15 @@ else
     echo -e "  Current version:   ${RED}unknown${NC}"
 fi
 
-# Find update file: /root/update_v*.sh
-UPDATE_FILE=$(ls -1 /root/update_v*.sh 2>/dev/null | sort -V | tail -1)
+# Find update file in /remote_tools/
+UPDATE_FILE=$(ls -1 "$TARGET_DIR"/update_v*.sh 2>/dev/null | sort -V | tail -1)
 
 if [ -z "$UPDATE_FILE" ]; then
     echo ""
     echo -e "${RED}No update found.${NC}"
     echo ""
-    echo "Place the update file in /root/ named like: update_v1.1.0.sh"
-    echo "  Example: scp update_v1.1.0.sh root@server:/root/"
+    echo "Place the update file in /remote_tools/ named like: update_v1.1.0.sh"
+    echo "  Example: scp update_v1.1.0.sh root@server:/remote_tools/"
     exit 1
 fi
 
@@ -1438,7 +1438,7 @@ echo "║                                                               ║"
 echo "║  Quick start:   bash /root/start.sh                          ║"
 echo "║  Or:            cd /remote_tools && bash menu.sh             ║"
 echo "║                                                               ║"
-echo "║  Update:  scp update_v1.1.0.sh root@server:/root/             ║"
+echo "║  Update:  Place update_vX.X.X.sh in /remote_tools/             ║"
 echo "║           then use menu option 33, or run update.sh          ║"
 echo "║                                                               ║"
 echo "║  Hidden: type 666 for security watchdog controls              ║"
