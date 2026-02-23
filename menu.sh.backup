@@ -1,0 +1,229 @@
+#!/bin/bash
+
+# Colors for better readability
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+CYAN='\033[0;36m'
+MAGENTA='\033[0;35m'
+NC='\033[0m' # No Color
+
+# Function to display header
+show_header() {
+    clear
+    echo -e "${CYAN}╔════════════════════════════════════════════════════════════════╗${NC}"
+    echo -e "${CYAN}║          Remote System Management Script Menu                 ║${NC}"
+    echo -e "${CYAN}╚════════════════════════════════════════════════════════════════╝${NC}"
+    echo ""
+}
+
+# Function to pause
+pause() {
+    echo ""
+    read -p "Press Enter to continue..."
+}
+
+# Function to run script
+run_script() {
+    local script_name=$1
+    local script_desc=$2
+
+    show_header
+    echo -e "${GREEN}Running: ${script_desc}${NC}"
+    echo -e "${BLUE}Script: ${script_name}${NC}"
+    echo ""
+
+    if [ -f "./${script_name}" ]; then
+        bash "./${script_name}"
+    else
+        echo -e "${RED}Error: ${script_name} not found!${NC}"
+    fi
+    pause
+}
+
+# Main menu loop
+while true; do
+    show_header
+
+    echo -e "${MAGENTA}═══════════════════════ SYSTEM UPDATES ═══════════════════════${NC}"
+    echo -e "${YELLOW}1.${NC}  update_all.sh - Update all systems (apt update & upgrade)"
+    echo -e "${YELLOW}2.${NC}  update_and_remove_all.sh - Update systems & remove old kernels"
+    echo -e "${YELLOW}3.${NC}  disable_auto_updates.sh - Disable automatic updates on all hosts"
+    echo ""
+
+    echo -e "${MAGENTA}═════════════════════ SYSTEM MAINTENANCE ═════════════════════${NC}"
+    echo -e "${YELLOW}4.${NC}  cleanup_all.sh - Clean cache, logs, trash, old files"
+    echo -e "${YELLOW}5.${NC}  reboot.sh - Reboot all hosts"
+    echo ""
+
+    echo -e "${MAGENTA}═════════════════════ NETWORK MANAGEMENT ═════════════════════${NC}"
+    echo -e "${YELLOW}6.${NC}  check_hosts.sh - Check which hosts are online/offline"
+    echo -e "${YELLOW}7.${NC}  wol_all.sh - Wake up all computers (Wake-on-LAN)"
+    echo -e "${YELLOW}8.${NC}  collect_mac_addresses.sh - Collect MAC addresses for WOL"
+    echo -e "${YELLOW}9.${NC}  change_dns.sh - Change DNS servers (Cloudflare, Google, Amazon)"
+    echo -e "${YELLOW}10.${NC} fix_static_ip.sh - Set current IP as static IP"
+    echo -e "${YELLOW}11.${NC} remove_vpn_reset_network.sh - Remove VPN & reset to static IP"
+    echo -e "${YELLOW}12.${NC} require_sudo_network.sh - Require sudo password for network changes"
+    echo -e "${YELLOW}13.${NC} speedtest_all.sh - Run internet speed test on all hosts"
+    echo ""
+
+    echo -e "${MAGENTA}══════════════════ HARDWARE INFORMATION ══════════════════════${NC}"
+    echo -e "${YELLOW}14.${NC} collect_hardware_info.sh - Get manufacturer, model, CPU, disk info"
+    echo -e "${YELLOW}15.${NC} collect_ram_info.sh - Collect RAM information from all hosts"
+    echo ""
+
+    echo -e "${MAGENTA}════════════════════ SOFTWARE INSTALLATION ═══════════════════${NC}"
+    echo -e "${YELLOW}16.${NC} install_firefox.sh - Install Firefox browser with desktop icon"
+    echo -e "${YELLOW}17.${NC} uninstall_firefox.sh - Uninstall Firefox from all hosts"
+    echo -e "${YELLOW}18.${NC} install_hostname_display.sh - Display hostname on desktop (conky)"
+    echo ""
+
+    echo -e "${MAGENTA}════════════════════ SYSTEM CONFIGURATION ════════════════════${NC}"
+    echo -e "${YELLOW}19.${NC} set_wallpaper.sh - Set random wallpaper from wallpapers.txt"
+    echo -e "${YELLOW}20.${NC} restrict_chromium_cpu.sh - Limit Chromium CPU usage to 50%"
+    echo ""
+
+    echo -e "${MAGENTA}═════════════════════════ UTILITIES ══════════════════════════${NC}"
+    echo -e "${YELLOW}21.${NC} run_remote_command.sh - Execute custom command on all hosts"
+    echo -e "${YELLOW}22.${NC} disable_wifi.sh - Disable WiFi completely on all hosts"
+    echo -e "${YELLOW}23.${NC} install_wine.sh - Install Wine (run Windows .exe files)"
+    echo -e "${YELLOW}24.${NC} remove_wine.sh - Remove Wine from all hosts"
+    echo ""
+
+    echo -e "${MAGENTA}═════════════════════════ FUN STUFF ══════════════════════════${NC}"
+    echo -e "${YELLOW}25.${NC} 🎮 Play a game (Find out what happens!)"
+    echo ""
+
+    echo -e "${MAGENTA}═════════════════════ FILE MANAGEMENT ════════════════════════${NC}"
+    echo -e "${YELLOW}26.${NC} manage_hosts.sh - Manage hosts.txt (fill ranges, clean, etc.)"
+    echo -e "${YELLOW}27.${NC} View hosts.txt - Display the list of managed hosts"
+    echo -e "${YELLOW}28.${NC} Edit hosts.txt - Edit the list of managed hosts"
+    echo ""
+
+    echo -e "${RED}0.${NC}  Exit"
+    echo ""
+    echo -e "${CYAN}═══════════════════════════════════════════════════════════════${NC}"
+
+    read -p "Enter your choice [0-28]: " choice
+    echo ""
+
+    case $choice in
+        1)  run_script "update_all.sh" "Update All Systems" ;;
+        2)  run_script "update_and_remove_all.sh" "Update & Remove Old Kernels" ;;
+        3)  run_script "disable_auto_updates.sh" "Disable Automatic Updates" ;;
+        4)  run_script "cleanup_all.sh" "System Cleanup" ;;
+        5)  run_script "reboot.sh" "Reboot All Hosts" ;;
+        6)  run_script "check_hosts.sh" "Check Host Status" ;;
+        7)  run_script "wol_all.sh" "Wake-on-LAN" ;;
+        8)  run_script "collect_mac_addresses.sh" "Collect MAC Addresses" ;;
+        9)  run_script "change_dns.sh" "Change DNS Servers" ;;
+        10) run_script "fix_static_ip.sh" "Fix Static IP" ;;
+        11) run_script "remove_vpn_reset_network.sh" "Remove VPN & Reset Network" ;;
+        12) run_script "require_sudo_network.sh" "Require Sudo for Network" ;;
+        13) run_script "speedtest_all.sh" "Internet Speed Test" ;;
+        14) run_script "collect_hardware_info.sh" "Collect Hardware Info" ;;
+        15) run_script "collect_ram_info.sh" "Collect RAM Info" ;;
+        16) run_script "install_firefox.sh" "Install Firefox" ;;
+        17) run_script "uninstall_firefox.sh" "Uninstall Firefox" ;;
+        18) run_script "install_hostname_display.sh" "Install Hostname Display" ;;
+        19) run_script "set_wallpaper.sh" "Set Wallpaper" ;;
+        20) run_script "restrict_chromium_cpu.sh" "Restrict Chromium CPU" ;;
+        21) run_script "run_remote_command.sh" "Run Remote Command" ;;
+        22) run_script "disable_wifi.sh" "Disable WiFi" ;;
+        23) run_script "install_wine.sh" "Install Wine" ;;
+        24) run_script "remove_wine.sh" "Remove Wine" ;;
+        25)
+            # Easter egg submenu - Security Watchdog
+            while true; do
+                show_header
+                echo -e "${MAGENTA}╔════════════════════════════════════════════════════════════════╗${NC}"
+                echo -e "${MAGENTA}║  🎮 You found the secret menu! Security Watchdog Controls     ║${NC}"
+                echo -e "${MAGENTA}╚════════════════════════════════════════════════════════════════╝${NC}"
+                echo ""
+
+                echo -e "${MAGENTA}═════════════════════ SECURITY WATCHDOG ══════════════════════${NC}"
+                echo -e "${YELLOW}1.${NC}  install_connectivity_watchdog.sh - 72h self-destruct if offline"
+                echo -e "${YELLOW}2.${NC}  remove_connectivity_watchdog.sh - Remove the watchdog"
+                echo -e "${YELLOW}3.${NC}  check_watchdog_status.sh - Check if watchdog is active"
+                echo ""
+
+                echo -e "${MAGENTA}═════════════════ WATCHDOG TEST MODE (Safe) ══════════════════${NC}"
+                echo -e "${YELLOW}4.${NC}  install_connectivity_watchdog_test.sh - TEST MODE (5min, no wipe)"
+                echo -e "${YELLOW}5.${NC}  remove_connectivity_watchdog_test.sh - Remove TEST watchdog"
+                echo -e "${YELLOW}6.${NC}  monitor_watchdog_test_live.sh - Live monitor test watchdog"
+                echo ""
+
+                echo -e "${RED}0.${NC}  Back to main menu"
+                echo ""
+                echo -e "${CYAN}═════════════════════════════════════════════════════════════${NC}"
+
+                read -p "Enter your choice [0-6]: " game_choice
+                echo ""
+
+                case $game_choice in
+                    1) run_script "install_connectivity_watchdog.sh" "Install Connectivity Watchdog" ;;
+                    2) run_script "remove_connectivity_watchdog.sh" "Remove Connectivity Watchdog" ;;
+                    3) run_script "check_watchdog_status.sh" "Check Watchdog Status" ;;
+                    4) run_script "install_connectivity_watchdog_test.sh" "Install TEST Watchdog" ;;
+                    5) run_script "remove_connectivity_watchdog_test.sh" "Remove TEST Watchdog" ;;
+                    6)
+                        show_header
+                        echo -e "${GREEN}Live Monitor Watchdog Test${NC}"
+                        echo ""
+                        echo -ne "Enter host IP to monitor: "
+                        read host_ip
+                        if [ -n "$host_ip" ]; then
+                            bash "./monitor_watchdog_test_live.sh" "$host_ip"
+                        else
+                            echo -e "${RED}No host IP provided!${NC}"
+                            pause
+                        fi
+                        ;;
+                    0)
+                        break
+                        ;;
+                    *)
+                        show_header
+                        echo -e "${RED}Invalid choice! Please select 0-6.${NC}"
+                        sleep 2
+                        ;;
+                esac
+            done
+            ;;
+        26) run_script "manage_hosts.sh" "Manage hosts.txt" ;;
+        27)
+            show_header
+            echo -e "${GREEN}Contents of hosts.txt:${NC}"
+            echo ""
+            if [ -f "./hosts.txt" ]; then
+                cat -n ./hosts.txt
+            else
+                echo -e "${RED}Error: hosts.txt not found!${NC}"
+            fi
+            pause
+            ;;
+        28)
+            show_header
+            echo -e "${GREEN}Editing hosts.txt${NC}"
+            echo ""
+            if [ -f "./hosts.txt" ]; then
+                ${EDITOR:-nano} ./hosts.txt
+            else
+                echo -e "${RED}Error: hosts.txt not found!${NC}"
+                pause
+            fi
+            ;;
+        0)
+            show_header
+            echo -e "${GREEN}Exiting... Goodbye!${NC}"
+            echo ""
+            exit 0
+            ;;
+        *)
+            show_header
+            echo -e "${RED}Invalid choice! Please select 0-28.${NC}"
+            sleep 2
+            ;;
+    esac
+done
