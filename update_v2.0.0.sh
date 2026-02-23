@@ -6,7 +6,7 @@
 # Run on your Debian server: sudo bash quick_install.sh
 # ============================================================================
 
-VERSION="1.0.0"
+VERSION="2.0.0"
 
 set -e
 
@@ -571,6 +571,8 @@ set +e
 echo "=== Check Disk Space ==="
 echo "Shows disk usage on all hosts. Warns if over 80%."
 echo ""
+OUTPUT_FILE="disk_space_$(date +%Y%m%d_%H%M%S).txt"
+echo "Disk Space Report - $(date)" > "$OUTPUT_FILE"
 for host in $(grep -v "^#" hosts.txt | grep -v "^$"); do
     RESULT=$(sshpass -p 'sweetcom' ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 sweetagent@"$host" \
         'echo "$(hostname)|$(df -h / | awk "NR==2{print \$5}" | tr -d "%")|$(df -h / | awk "NR==2{print \$2}")|$(df -h / | awk "NR==2{print \$4}")"' 2>/dev/null) || true
@@ -579,17 +581,21 @@ for host in $(grep -v "^#" hosts.txt | grep -v "^$"); do
         TOTAL=$(echo "$RESULT" | cut -d'|' -f3); FREE=$(echo "$RESULT" | cut -d'|' -f4)
         if [ "$USAGE" -ge 90 ] 2>/dev/null; then
             echo -e "  \033[0;31m[${USAGE}%]\033[0m $host ($HNAME) - ${TOTAL} total, ${FREE} free  ** CRITICAL **"
+            echo "[${USAGE}%] $host ($HNAME) - ${TOTAL} total, ${FREE} free  ** CRITICAL **" >> "$OUTPUT_FILE"
         elif [ "$USAGE" -ge 80 ] 2>/dev/null; then
             echo -e "  \033[1;33m[${USAGE}%]\033[0m $host ($HNAME) - ${TOTAL} total, ${FREE} free  * WARNING *"
+            echo "[${USAGE}%] $host ($HNAME) - ${TOTAL} total, ${FREE} free  * WARNING *" >> "$OUTPUT_FILE"
         else
             echo -e "  \033[0;32m[${USAGE}%]\033[0m $host ($HNAME) - ${TOTAL} total, ${FREE} free"
+            echo "[${USAGE}%] $host ($HNAME) - ${TOTAL} total, ${FREE} free" >> "$OUTPUT_FILE"
         fi
     else
         echo -e "  \033[0;31m[----]\033[0m $host - Could not connect"
+        echo "[----] $host - Could not connect" >> "$OUTPUT_FILE"
     fi
 done
 echo ""
-echo "Done."
+echo "Saved to: $OUTPUT_FILE"
 EOF
 chmod +x check_disk_space.sh
 echo "  [18/33] check_disk_space.sh"
@@ -868,30 +874,33 @@ echo "  [26/33] run_remote_command.sh"
 cat > delete_ssh_keys.sh << 'EOF'
 #!/bin/bash
 set +e
-echo "=== Delete SSH Keys ==="
-echo "Removes all SSH keys from all users and regenerates host keys."
+echo "=== Delete SSH Keys (Local) ==="
+echo "Removes all SSH keys on THIS machine and regenerates host keys."
+echo "This does NOT affect remote hosts."
 echo ""
-read -p "Delete ALL SSH keys on ALL hosts? (yes/no): " confirm
+read -p "Delete ALL SSH keys on this machine? (yes/no): " confirm
 if [ "$confirm" != "yes" ]; then echo "Cancelled."; exit 0; fi
 echo ""
-for host in $(grep -v "^#" hosts.txt | grep -v "^$"); do
-    echo "[$host] Deleting SSH keys..."
-    sshpass -p 'sweetcom' ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 sweetagent@"$host" \
-        'echo sweetcom | sudo -S bash -c "
-        for user_home in /home/*; do
-            if [ -d \"\$user_home/.ssh\" ]; then
-                rm -f \"\$user_home/.ssh/id_\"* \"\$user_home/.ssh/authorized_keys\" \"\$user_home/.ssh/known_hosts\"
-            fi
-        done
-        if [ -d /root/.ssh ]; then
-            rm -f /root/.ssh/id_* /root/.ssh/authorized_keys /root/.ssh/known_hosts
-        fi
-        rm -f /etc/ssh/ssh_host_*
-        ssh-keygen -A 2>/dev/null || dpkg-reconfigure openssh-server 2>/dev/null || true
-        echo \"SSH keys deleted, host keys regenerated\"
-    "' 2>&1 && echo "[$host] OK" || echo "[$host] FAILED"
+
+# Clean user home directories
+for user_home in /home/*; do
+    if [ -d "$user_home/.ssh" ]; then
+        rm -f "$user_home/.ssh/id_"* "$user_home/.ssh/authorized_keys" "$user_home/.ssh/known_hosts"
+        echo "  Cleaned: $user_home/.ssh/"
+    fi
 done
+
+# Clean root
+if [ -d /root/.ssh ]; then
+    rm -f /root/.ssh/id_* /root/.ssh/authorized_keys /root/.ssh/known_hosts
+    echo "  Cleaned: /root/.ssh/"
+fi
+
+# Regenerate host keys
+rm -f /etc/ssh/ssh_host_*
+ssh-keygen -A 2>/dev/null || dpkg-reconfigure openssh-server 2>/dev/null || true
 echo ""
+echo "SSH keys deleted, host keys regenerated."
 echo "Done."
 EOF
 chmod +x delete_ssh_keys.sh
@@ -906,18 +915,23 @@ set +e
 echo "=== Check Uptime ==="
 echo "Shows how long each host has been running."
 echo ""
+OUTPUT_FILE="uptime_$(date +%Y%m%d_%H%M%S).txt"
+echo "Uptime Report - $(date)" > "$OUTPUT_FILE"
+echo "" >> "$OUTPUT_FILE"
 for host in $(grep -v "^#" hosts.txt | grep -v "^$"); do
     RESULT=$(sshpass -p 'sweetcom' ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 sweetagent@"$host" \
         'echo "$(hostname)|$(uptime -p)|$(uptime -s)"' 2>/dev/null) || true
     if [ -n "$RESULT" ]; then
         HNAME=$(echo "$RESULT" | cut -d'|' -f1); UP=$(echo "$RESULT" | cut -d'|' -f2); SINCE=$(echo "$RESULT" | cut -d'|' -f3)
         echo "  $host ($HNAME) - $UP (since $SINCE)"
+        echo "$host ($HNAME) - $UP (since $SINCE)" >> "$OUTPUT_FILE"
     else
         echo -e "  $host - \033[0;31mOFFLINE\033[0m"
+        echo "$host - OFFLINE" >> "$OUTPUT_FILE"
     fi
 done
 echo ""
-echo "Done."
+echo "Saved to: $OUTPUT_FILE"
 EOF
 chmod +x check_uptime.sh
 echo "  [28/33] check_uptime.sh"
@@ -931,17 +945,29 @@ set +e
 echo "=== Check Services ==="
 echo "Shows status of important services on all hosts."
 echo ""
+OUTPUT_FILE="services_$(date +%Y%m%d_%H%M%S).txt"
+echo "Services Report - $(date)" > "$OUTPUT_FILE"
+echo "" >> "$OUTPUT_FILE"
 SERVICES="ssh NetworkManager cron rsyslog"
 for host in $(grep -v "^#" hosts.txt | grep -v "^$"); do
     echo "--- [$host] ---"
-    sshpass -p 'sweetcom' ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 sweetagent@"$host" \
+    echo "--- [$host] ---" >> "$OUTPUT_FILE"
+    RESULT=$(sshpass -p 'sweetcom' ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 sweetagent@"$host" \
         "for svc in $SERVICES; do
             STATUS=\$(systemctl is-active \$svc 2>/dev/null || echo 'not found')
             if [ \"\$STATUS\" = 'active' ]; then echo \"  [OK]   \$svc\"; else echo \"  [FAIL] \$svc (\$STATUS)\"; fi
-        done" 2>/dev/null || echo "  Could not connect"
+        done" 2>/dev/null)
+    if [ -n "$RESULT" ]; then
+        echo "$RESULT"
+        echo "$RESULT" >> "$OUTPUT_FILE"
+    else
+        echo "  Could not connect"
+        echo "  Could not connect" >> "$OUTPUT_FILE"
+    fi
     echo ""
+    echo "" >> "$OUTPUT_FILE"
 done
-echo "Done."
+echo "Saved to: $OUTPUT_FILE"
 EOF
 chmod +x check_services.sh
 echo "  [29/33] check_services.sh"
@@ -1160,6 +1186,7 @@ set +e
 
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC='\033[0m'
 TARGET_DIR="/remote_tools"
+GITHUB_URL="https://raw.githubusercontent.com/axelsarassamit/atomator/main/quick_install.sh"
 
 echo -e "${CYAN}=== Update Remote Management Scripts ===${NC}"
 echo ""
@@ -1173,33 +1200,73 @@ else
     CURRENT="unknown"
     echo -e "  Current version:   ${RED}unknown${NC}"
 fi
-
-# Find update file: /root/update_v*.sh
-UPDATE_FILE=$(ls -1 /root/update_v*.sh 2>/dev/null | sort -V | tail -1)
-
-if [ -z "$UPDATE_FILE" ]; then
-    echo ""
-    echo -e "${RED}No update found.${NC}"
-    echo ""
-    echo "Place the update file in /root/ named like: update_v1.1.0.sh"
-    echo "  Example: scp update_v1.1.0.sh root@server:/root/"
-    exit 1
-fi
-
-# Extract version from filename: update_v1.2.3.sh -> 1.2.3
-FILENAME=$(basename "$UPDATE_FILE")
-NEW_VERSION=$(echo "$FILENAME" | sed 's/update_v//;s/\.sh$//')
-
-echo -e "  New version:       ${YELLOW}v${NEW_VERSION}${NC}  ($FILENAME)"
 echo ""
 
-# Same version check
+# Check for local update file
+LOCAL_FILE=$(ls -1 "$TARGET_DIR"/update_v*.sh 2>/dev/null | sort -V | tail -1)
+
+echo -e "${YELLOW}Update options:${NC}"
+echo ""
+if [ -n "$LOCAL_FILE" ]; then
+    LOCAL_NAME=$(basename "$LOCAL_FILE")
+    LOCAL_VER=$(echo "$LOCAL_NAME" | sed 's/update_v//;s/\.sh$//')
+    echo -e "  ${YELLOW}1.${NC} Update from local file  (${LOCAL_NAME} - v${LOCAL_VER})"
+else
+    echo -e "  ${RED}1.${NC} Update from local file  (no update file found)"
+fi
+echo -e "  ${YELLOW}2.${NC} Download latest from GitHub"
+echo -e "  ${RED}0.${NC} Cancel"
+echo ""
+read -p "  Choice [0-2]: " update_choice
+
+case $update_choice in
+    1)
+        if [ -z "$LOCAL_FILE" ]; then
+            echo ""
+            echo -e "${RED}No local update file found.${NC}"
+            echo "Place an update file in /remote_tools/ named like: update_v2.1.0.sh"
+            exit 1
+        fi
+        UPDATE_FILE="$LOCAL_FILE"
+        NEW_VERSION="$LOCAL_VER"
+        ;;
+    2)
+        echo ""
+        echo "Downloading from GitHub..."
+        TMP_FILE="/tmp/atomator_github_update.sh"
+        curl -sL "$GITHUB_URL" -o "$TMP_FILE"
+        if [ ! -s "$TMP_FILE" ]; then
+            echo -e "${RED}Download failed. Check your internet connection.${NC}"
+            exit 1
+        fi
+        NEW_VERSION=$(grep '^VERSION=' "$TMP_FILE" | head -1 | cut -d'"' -f2)
+        if [ -z "$NEW_VERSION" ]; then
+            echo -e "${RED}Could not detect version from downloaded file.${NC}"
+            exit 1
+        fi
+        echo -e "  Downloaded version: ${YELLOW}v${NEW_VERSION}${NC}"
+        # Copy to /remote_tools/ with version name
+        UPDATE_FILE="$TARGET_DIR/update_v${NEW_VERSION}.sh"
+        cp "$TMP_FILE" "$UPDATE_FILE"
+        chmod +x "$UPDATE_FILE"
+        rm -f "$TMP_FILE"
+        ;;
+    *)
+        echo "Cancelled."
+        exit 0
+        ;;
+esac
+
+echo ""
+
+# Version comparison
 if [ "$CURRENT" = "$NEW_VERSION" ]; then
-    echo -e "${YELLOW}Same version. Reinstall anyway?${NC}"
+    echo -e "${YELLOW}Same version (v${NEW_VERSION}). Reinstall anyway?${NC}"
     read -p "(yes/no): " confirm
     if [ "$confirm" != "yes" ]; then echo "Cancelled."; exit 0; fi
 else
-    read -p "Update v${CURRENT} -> v${NEW_VERSION}? (yes/no): " confirm
+    echo -e "  Update: ${GREEN}v${CURRENT}${NC} -> ${YELLOW}v${NEW_VERSION}${NC}"
+    read -p "Proceed? (yes/no): " confirm
     if [ "$confirm" != "yes" ]; then echo "Cancelled."; exit 0; fi
 fi
 
@@ -1216,6 +1283,7 @@ done
 echo ""
 
 # Run the installer
+FILENAME=$(basename "$UPDATE_FILE")
 echo "Running $FILENAME..."
 echo ""
 bash "$UPDATE_FILE"
@@ -1249,7 +1317,7 @@ INSTALLED=$(tail -1 version.txt 2>/dev/null || echo "unknown")
 show_header() {
     clear
     echo -e "${CYAN}╔════════════════════════════════════════════════════════════════╗${NC}"
-    echo -e "${CYAN}║         Remote Xubuntu Management  v${VERSION}                       ║${NC}"
+    echo -e "${CYAN}║            Atomator  v${VERSION}  -  Remote Xubuntu Management       ║${NC}"
     echo -e "${CYAN}╚════════════════════════════════════════════════════════════════╝${NC}"
     echo ""
 }
@@ -1262,111 +1330,264 @@ run_script() {
     if [ -f "./$1" ]; then bash "./$1"; else echo -e "${RED}Error: $1 not found!${NC}"; fi
     pause
 }
+view_latest() {
+    show_header
+    LATEST=$(ls -1t $1 2>/dev/null | head -1)
+    if [ -n "$LATEST" ]; then
+        echo -e "${GREEN}Latest: $LATEST${NC}"
+        echo ""
+        cat "$LATEST"
+    else
+        echo -e "${RED}No reports found.${NC}"
+    fi
+    pause
+}
+
+# ── SUBMENUS ──
+
+menu_updates() {
+    while true; do
+        show_header
+        HOST_COUNT=$(grep -v "^#" hosts.txt 2>/dev/null | grep -v "^$" | wc -l)
+        echo -e "${BLUE}  Hosts: ${HOST_COUNT}  |  Installed: ${INSTALLED}${NC}"
+        echo ""
+        echo -e "${MAGENTA}  SYSTEM UPDATES & MAINTENANCE${NC}"
+        echo ""
+        echo -e "   ${YELLOW}1.${NC} Update all systems            (apt update + upgrade)"
+        echo -e "   ${YELLOW}2.${NC} Update + remove old kernels   (frees disk space)"
+        echo -e "   ${YELLOW}3.${NC} Disable automatic updates     (stops unattended-upgrades)"
+        echo -e "   ${YELLOW}4.${NC} System cleanup                (cache, logs, trash)"
+        echo -e "   ${YELLOW}5.${NC} Reboot all hosts"
+        echo -e "   ${YELLOW}6.${NC} Shutdown all hosts"
+        echo ""
+        echo -e "   ${RED}0.${NC} Back"
+        echo ""
+        read -p "  Choice [0-6]: " c
+        case $c in
+            1) run_script "update_all.sh" "Update All Systems" ;;
+            2) run_script "update_and_remove_all.sh" "Update + Remove Old Kernels" ;;
+            3) run_script "disable_auto_updates.sh" "Disable Automatic Updates" ;;
+            4) run_script "cleanup_all.sh" "System Cleanup" ;;
+            5) run_script "reboot.sh" "Reboot All Hosts" ;;
+            6) run_script "shutdown_all.sh" "Shutdown All Hosts" ;;
+            0) break ;;
+            *) echo -e "${RED}Invalid.${NC}"; sleep 1 ;;
+        esac
+    done
+}
+
+menu_network() {
+    while true; do
+        show_header
+        HOST_COUNT=$(grep -v "^#" hosts.txt 2>/dev/null | grep -v "^$" | wc -l)
+        echo -e "${BLUE}  Hosts: ${HOST_COUNT}  |  Installed: ${INSTALLED}${NC}"
+        echo ""
+        echo -e "${MAGENTA}  NETWORK${NC}"
+        echo ""
+        echo -e "   ${YELLOW} 1.${NC} Check host status             (ping all hosts)"
+        echo -e "   ${YELLOW} 2.${NC} Wake-on-LAN                   (wake up all computers)"
+        echo -e "   ${YELLOW} 3.${NC} Collect MAC addresses          (for WOL)"
+        echo -e "   ${YELLOW} 4.${NC} View MAC addresses"
+        echo -e "   ${YELLOW} 5.${NC} Change DNS servers             (Cloudflare + Google + Quad9)"
+        echo -e "   ${YELLOW} 6.${NC} Fix static IP                  (set current IP as permanent)"
+        echo -e "   ${YELLOW} 7.${NC} Remove VPN + reset network     (clean VPN, set static IP)"
+        echo -e "   ${YELLOW} 8.${NC} Lock network settings          (require sudo for changes)"
+        echo -e "   ${YELLOW} 9.${NC} Speed test all hosts"
+        echo -e "   ${YELLOW}10.${NC} View latest speed test"
+        echo -e "   ${YELLOW}11.${NC} Disable WiFi                   (permanent, all hosts)"
+        echo ""
+        echo -e "   ${RED} 0.${NC} Back"
+        echo ""
+        read -p "  Choice [0-11]: " c
+        case $c in
+            1)  run_script "check_hosts.sh" "Check Host Status" ;;
+            2)  run_script "wol_all.sh" "Wake-on-LAN" ;;
+            3)  run_script "collect_mac_addresses.sh" "Collect MAC Addresses" ;;
+            4)  show_header
+                echo -e "${GREEN}MAC Addresses:${NC}"
+                echo ""
+                if [ -f "./mac_addresses.txt" ]; then cat ./mac_addresses.txt; else echo -e "${RED}No MAC addresses collected yet. Run option 3 first.${NC}"; fi
+                pause ;;
+            5)  run_script "change_dns.sh" "Change DNS Servers" ;;
+            6)  run_script "fix_static_ip.sh" "Fix Static IP" ;;
+            7)  run_script "remove_vpn_reset_network.sh" "Remove VPN + Reset Network" ;;
+            8)  run_script "require_sudo_network.sh" "Lock Network Settings" ;;
+            9)  run_script "speedtest_all.sh" "Speed Test All Hosts" ;;
+            10) view_latest "speedtest_results_*.txt" ;;
+            11) run_script "disable_wifi.sh" "Disable WiFi" ;;
+            0)  break ;;
+            *)  echo -e "${RED}Invalid.${NC}"; sleep 1 ;;
+        esac
+    done
+}
+
+menu_info() {
+    while true; do
+        show_header
+        HOST_COUNT=$(grep -v "^#" hosts.txt 2>/dev/null | grep -v "^$" | wc -l)
+        echo -e "${BLUE}  Hosts: ${HOST_COUNT}  |  Installed: ${INSTALLED}${NC}"
+        echo ""
+        echo -e "${MAGENTA}  INFORMATION & REPORTS${NC}"
+        echo ""
+        echo -e "   ${YELLOW} 1.${NC} Collect hardware info          (CPU, RAM, disk, model)"
+        echo -e "   ${YELLOW} 2.${NC} View latest hardware report"
+        echo -e "   ${YELLOW} 3.${NC} Collect RAM info               (detailed memory report)"
+        echo -e "   ${YELLOW} 4.${NC} View latest RAM report"
+        echo -e "   ${YELLOW} 5.${NC} Check disk space               (warns if disk is full)"
+        echo -e "   ${YELLOW} 6.${NC} View latest disk report"
+        echo -e "   ${YELLOW} 7.${NC} Check uptime                   (how long each host is running)"
+        echo -e "   ${YELLOW} 8.${NC} View latest uptime report"
+        echo -e "   ${YELLOW} 9.${NC} Check services                 (SSH, NetworkManager, cron)"
+        echo -e "   ${YELLOW}10.${NC} View latest services report"
+        echo ""
+        echo -e "   ${RED} 0.${NC} Back"
+        echo ""
+        read -p "  Choice [0-10]: " c
+        case $c in
+            1)  run_script "collect_hardware_info.sh" "Collect Hardware Info" ;;
+            2)  view_latest "hardware_info_*.txt" ;;
+            3)  run_script "collect_ram_info.sh" "Collect RAM Info" ;;
+            4)  view_latest "ram_info_*.txt" ;;
+            5)  run_script "check_disk_space.sh" "Check Disk Space" ;;
+            6)  view_latest "disk_space_*.txt" ;;
+            7)  run_script "check_uptime.sh" "Check Uptime" ;;
+            8)  view_latest "uptime_*.txt" ;;
+            9)  run_script "check_services.sh" "Check Services" ;;
+            10) view_latest "services_*.txt" ;;
+            0)  break ;;
+            *)  echo -e "${RED}Invalid.${NC}"; sleep 1 ;;
+        esac
+    done
+}
+
+menu_software() {
+    while true; do
+        show_header
+        echo -e "${MAGENTA}  SOFTWARE${NC}"
+        echo ""
+        echo -e "   ${YELLOW}1.${NC} Install Firefox"
+        echo -e "   ${YELLOW}2.${NC} Uninstall Firefox"
+        echo -e "   ${YELLOW}3.${NC} Install hostname display       (conky on desktop)"
+        echo -e "   ${YELLOW}4.${NC} Install Wine                   (run Windows .exe files)"
+        echo -e "   ${YELLOW}5.${NC} Remove Wine"
+        echo ""
+        echo -e "   ${RED}0.${NC} Back"
+        echo ""
+        read -p "  Choice [0-5]: " c
+        case $c in
+            1) run_script "install_firefox.sh" "Install Firefox" ;;
+            2) run_script "uninstall_firefox.sh" "Uninstall Firefox" ;;
+            3) run_script "install_hostname_display.sh" "Install Hostname Display" ;;
+            4) run_script "install_wine.sh" "Install Wine" ;;
+            5) run_script "remove_wine.sh" "Remove Wine" ;;
+            0) break ;;
+            *) echo -e "${RED}Invalid.${NC}"; sleep 1 ;;
+        esac
+    done
+}
+
+menu_config() {
+    while true; do
+        show_header
+        echo -e "${MAGENTA}  CONFIGURATION${NC}"
+        echo ""
+        echo -e "   ${YELLOW}1.${NC} Set wallpaper                  (random from wallpapers.txt)"
+        echo -e "   ${YELLOW}2.${NC} Restrict Chromium CPU          (limit to 50%)"
+        echo ""
+        echo -e "   ${RED}0.${NC} Back"
+        echo ""
+        read -p "  Choice [0-2]: " c
+        case $c in
+            1) run_script "set_wallpaper.sh" "Set Wallpaper" ;;
+            2) run_script "restrict_chromium_cpu.sh" "Restrict Chromium CPU" ;;
+            0) break ;;
+            *) echo -e "${RED}Invalid.${NC}"; sleep 1 ;;
+        esac
+    done
+}
+
+menu_tools() {
+    while true; do
+        show_header
+        echo -e "${MAGENTA}  TOOLS${NC}"
+        echo ""
+        echo -e "   ${YELLOW}1.${NC} Run custom command             (execute anything on all hosts)"
+        echo -e "   ${YELLOW}2.${NC} Delete SSH keys (local)        (clean keys on this server)"
+        echo ""
+        echo -e "   ${RED}0.${NC} Back"
+        echo ""
+        read -p "  Choice [0-2]: " c
+        case $c in
+            1) run_script "run_remote_command.sh" "Run Custom Command" ;;
+            2) run_script "delete_ssh_keys.sh" "Delete SSH Keys (Local)" ;;
+            0) break ;;
+            *) echo -e "${RED}Invalid.${NC}"; sleep 1 ;;
+        esac
+    done
+}
+
+menu_files() {
+    while true; do
+        show_header
+        echo -e "${MAGENTA}  FILE MANAGEMENT${NC}"
+        echo ""
+        echo -e "   ${YELLOW}1.${NC} Manage hosts.txt               (add, remove, fill ranges)"
+        echo -e "   ${YELLOW}2.${NC} View hosts.txt"
+        echo -e "   ${YELLOW}3.${NC} Edit hosts.txt"
+        echo ""
+        echo -e "   ${RED}0.${NC} Back"
+        echo ""
+        read -p "  Choice [0-3]: " c
+        case $c in
+            1) run_script "manage_hosts.sh" "Manage hosts.txt" ;;
+            2)
+                show_header
+                echo -e "${GREEN}Contents of hosts.txt:${NC}"
+                echo ""
+                if [ -f "./hosts.txt" ]; then cat -n ./hosts.txt; else echo -e "${RED}hosts.txt not found!${NC}"; fi
+                pause
+                ;;
+            3)
+                show_header
+                if [ -f "./hosts.txt" ]; then ${EDITOR:-nano} ./hosts.txt; else echo -e "${RED}hosts.txt not found!${NC}"; pause; fi
+                ;;
+            0) break ;;
+            *) echo -e "${RED}Invalid.${NC}"; sleep 1 ;;
+        esac
+    done
+}
+
+# ── MAIN MENU ──
 
 while true; do
     show_header
     HOST_COUNT=$(grep -v "^#" hosts.txt 2>/dev/null | grep -v "^$" | wc -l)
     echo -e "${BLUE}  Hosts: ${HOST_COUNT}  |  Installed: ${INSTALLED}${NC}"
     echo ""
-
-    echo -e "${MAGENTA}  SYSTEM UPDATES${NC}"
-    echo -e "   ${YELLOW} 1.${NC} Update all systems            (apt update + upgrade)"
-    echo -e "   ${YELLOW} 2.${NC} Update + remove old kernels   (frees disk space)"
-    echo -e "   ${YELLOW} 3.${NC} Disable automatic updates     (stops unattended-upgrades)"
+    echo -e "   ${YELLOW}1.${NC} System Updates & Maintenance"
+    echo -e "   ${YELLOW}2.${NC} Network"
+    echo -e "   ${YELLOW}3.${NC} Information & Reports"
+    echo -e "   ${YELLOW}4.${NC} Software"
+    echo -e "   ${YELLOW}5.${NC} Configuration"
+    echo -e "   ${YELLOW}6.${NC} Tools"
+    echo -e "   ${YELLOW}7.${NC} File Management"
+    echo -e "   ${YELLOW}8.${NC} Update Scripts"
     echo ""
-    echo -e "${MAGENTA}  SYSTEM MAINTENANCE${NC}"
-    echo -e "   ${YELLOW} 4.${NC} System cleanup                (cache, logs, trash)"
-    echo -e "   ${YELLOW} 5.${NC} Reboot all hosts"
-    echo -e "   ${YELLOW} 6.${NC} Shutdown all hosts"
-    echo ""
-    echo -e "${MAGENTA}  NETWORK${NC}"
-    echo -e "   ${YELLOW} 7.${NC} Check host status             (ping all hosts)"
-    echo -e "   ${YELLOW} 8.${NC} Wake-on-LAN                   (wake up all computers)"
-    echo -e "   ${YELLOW} 9.${NC} Collect MAC addresses          (for WOL)"
-    echo -e "   ${YELLOW}10.${NC} Change DNS servers             (Cloudflare + Google + Quad9)"
-    echo -e "   ${YELLOW}11.${NC} Fix static IP                  (set current IP as permanent)"
-    echo -e "   ${YELLOW}12.${NC} Remove VPN + reset network     (clean VPN, set static IP)"
-    echo -e "   ${YELLOW}13.${NC} Lock network settings          (require sudo for changes)"
-    echo -e "   ${YELLOW}14.${NC} Speed test all hosts"
-    echo -e "   ${YELLOW}15.${NC} Disable WiFi                   (permanent, all hosts)"
-    echo ""
-    echo -e "${MAGENTA}  INFORMATION${NC}"
-    echo -e "   ${YELLOW}16.${NC} Collect hardware info          (CPU, RAM, disk, model)"
-    echo -e "   ${YELLOW}17.${NC} Collect RAM info               (detailed memory report)"
-    echo -e "   ${YELLOW}18.${NC} Check disk space               (warns if disk is full)"
-    echo -e "   ${YELLOW}19.${NC} Check uptime                   (how long each host is running)"
-    echo -e "   ${YELLOW}20.${NC} Check services                 (SSH, NetworkManager, cron)"
-    echo ""
-    echo -e "${MAGENTA}  SOFTWARE${NC}"
-    echo -e "   ${YELLOW}21.${NC} Install Firefox"
-    echo -e "   ${YELLOW}22.${NC} Uninstall Firefox"
-    echo -e "   ${YELLOW}23.${NC} Install hostname display       (conky on desktop)"
-    echo -e "   ${YELLOW}24.${NC} Install Wine                   (run Windows .exe files)"
-    echo -e "   ${YELLOW}25.${NC} Remove Wine"
-    echo ""
-    echo -e "${MAGENTA}  CONFIGURATION${NC}"
-    echo -e "   ${YELLOW}26.${NC} Set wallpaper                  (random from wallpapers.txt)"
-    echo -e "   ${YELLOW}27.${NC} Restrict Chromium CPU          (limit to 50%)"
-    echo ""
-    echo -e "${MAGENTA}  TOOLS${NC}"
-    echo -e "   ${YELLOW}28.${NC} Run custom command             (execute anything on all hosts)"
-    echo -e "   ${YELLOW}29.${NC} Delete all SSH keys"
-    echo ""
-    echo -e "${MAGENTA}  FILE MANAGEMENT${NC}"
-    echo -e "   ${YELLOW}30.${NC} Manage hosts.txt               (add, remove, fill ranges)"
-    echo -e "   ${YELLOW}31.${NC} View hosts.txt"
-    echo -e "   ${YELLOW}32.${NC} Edit hosts.txt"
-    echo ""
-    echo -e "   ${YELLOW}33.${NC} Update scripts                 (install new version from /root/)"
-    echo -e "   ${RED} 0.${NC} Exit"
+    echo -e "   ${RED}0.${NC} Exit"
     echo ""
     echo -e "${CYAN}══════════════════════════════════════════════════════════════════${NC}"
-    read -p "  Choice [0-33]: " choice
+    read -p "  Choice [0-8]: " choice
     echo ""
 
     case $choice in
-        1)  run_script "update_all.sh" "Update All Systems" ;;
-        2)  run_script "update_and_remove_all.sh" "Update + Remove Old Kernels" ;;
-        3)  run_script "disable_auto_updates.sh" "Disable Automatic Updates" ;;
-        4)  run_script "cleanup_all.sh" "System Cleanup" ;;
-        5)  run_script "reboot.sh" "Reboot All Hosts" ;;
-        6)  run_script "shutdown_all.sh" "Shutdown All Hosts" ;;
-        7)  run_script "check_hosts.sh" "Check Host Status" ;;
-        8)  run_script "wol_all.sh" "Wake-on-LAN" ;;
-        9)  run_script "collect_mac_addresses.sh" "Collect MAC Addresses" ;;
-        10) run_script "change_dns.sh" "Change DNS Servers" ;;
-        11) run_script "fix_static_ip.sh" "Fix Static IP" ;;
-        12) run_script "remove_vpn_reset_network.sh" "Remove VPN + Reset Network" ;;
-        13) run_script "require_sudo_network.sh" "Lock Network Settings" ;;
-        14) run_script "speedtest_all.sh" "Speed Test All Hosts" ;;
-        15) run_script "disable_wifi.sh" "Disable WiFi" ;;
-        16) run_script "collect_hardware_info.sh" "Collect Hardware Info" ;;
-        17) run_script "collect_ram_info.sh" "Collect RAM Info" ;;
-        18) run_script "check_disk_space.sh" "Check Disk Space" ;;
-        19) run_script "check_uptime.sh" "Check Uptime" ;;
-        20) run_script "check_services.sh" "Check Services" ;;
-        21) run_script "install_firefox.sh" "Install Firefox" ;;
-        22) run_script "uninstall_firefox.sh" "Uninstall Firefox" ;;
-        23) run_script "install_hostname_display.sh" "Install Hostname Display" ;;
-        24) run_script "install_wine.sh" "Install Wine" ;;
-        25) run_script "remove_wine.sh" "Remove Wine" ;;
-        26) run_script "set_wallpaper.sh" "Set Wallpaper" ;;
-        27) run_script "restrict_chromium_cpu.sh" "Restrict Chromium CPU" ;;
-        28) run_script "run_remote_command.sh" "Run Custom Command" ;;
-        29) run_script "delete_ssh_keys.sh" "Delete SSH Keys" ;;
-        30) run_script "manage_hosts.sh" "Manage hosts.txt" ;;
-        31)
-            show_header
-            echo -e "${GREEN}Contents of hosts.txt:${NC}"
-            echo ""
-            if [ -f "./hosts.txt" ]; then cat -n ./hosts.txt; else echo -e "${RED}hosts.txt not found!${NC}"; fi
-            pause
-            ;;
-        32)
-            show_header
-            if [ -f "./hosts.txt" ]; then ${EDITOR:-nano} ./hosts.txt; else echo -e "${RED}hosts.txt not found!${NC}"; pause; fi
-            ;;
-        33)
+        1) menu_updates ;;
+        2) menu_network ;;
+        3) menu_info ;;
+        4) menu_software ;;
+        5) menu_config ;;
+        6) menu_tools ;;
+        7) menu_files ;;
+        8)
             show_header
             echo -e "${GREEN}Running: Update Scripts${NC}"
             echo ""
@@ -1438,10 +1659,8 @@ echo "║                                                               ║"
 echo "║  Quick start:   bash /root/start.sh                          ║"
 echo "║  Or:            cd /remote_tools && bash menu.sh             ║"
 echo "║                                                               ║"
-echo "║  Update:  scp update_v1.1.0.sh root@server:/root/             ║"
-echo "║           then use menu option 33, or run update.sh          ║"
-echo "║                                                               ║"
-echo "║  Hidden: type 666 for security watchdog controls              ║"
+echo "║  Update:  Menu option 8, or run update.sh directly           ║"
+echo "║           Supports local files and GitHub download            ║"
 echo "║                                                               ║"
 echo "╚════════════════════════════════════════════════════════════════╝"
 echo ""
