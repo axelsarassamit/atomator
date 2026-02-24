@@ -486,6 +486,7 @@ After installation, `/remote_tools/` contains:
 
 | Version | Date | Changes |
 |---------|------|---------|
+| v.02.01.01 | 2026-02-24 | Fixed: VPN removal script wiped DNS causing total network loss on all hosts. Fixed: static IP script now always sets DNS with fallback to 1.1.1.1/8.8.8.8/9.9.9.9. |
 | v.02.01.00 | 2026-02-24 | Renamed to "The Automator". New version format v.XX.YY.AA. Credentials system (`credentials.conf`) replaces hardcoded passwords. Password change script. Debug menu logging. Update catalog with version revert. Changelog display on updates. Wallpaper management script. Watchdog host configuration. View README from menu. Fixed: sudo command not found in update menu. |
 | v.02.00.00 | 2026-02-23 | Submenu system (8 categories), report viewers for all data collectors, GitHub update support, delete SSH keys now local-only, timestamped output files for disk/uptime/services scripts. |
 | v.01.00.00 | 2026-02-23 | Complete rewrite. 34 scripts, new menu with descriptions, version system, update mechanism. Added shutdown, disk space, uptime, services scripts. Consistent error handling across all scripts. |
