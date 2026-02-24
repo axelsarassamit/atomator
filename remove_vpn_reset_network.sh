@@ -1,12 +1,13 @@
 #!/bin/bash
 set +e
+source ./credentials.conf 2>/dev/null || { echo "ERROR: credentials.conf not found!"; exit 1; }
 echo "=== Remove VPN & Reset Network ==="
 echo "Removes all VPN packages/connections and resets to static IP."
 echo ""
 for host in $(grep -v "^#" hosts.txt | grep -v "^$"); do
     echo "[$host] Removing VPN + resetting..."
-    sshpass -p 'sweetcom' ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 sweetagent@"$host" \
-        'echo sweetcom | sudo -S bash -c "
+    sshpass -p "$SSH_PASS" ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$SSH_USER"@"$host" \
+        'echo '"$SSH_PASS"' | sudo -S bash -c "
         DEBIAN_FRONTEND=noninteractive apt-get remove -y --purge openvpn wireguard wireguard-tools network-manager-openvpn network-manager-vpnc network-manager-pptp network-manager-l2tp 2>/dev/null || true
         apt-get autoremove -y 2>/dev/null || true
         for conn in \$(nmcli -t -f NAME,TYPE connection show | grep -E \"vpn|wireguard|tun|openvpn\" | cut -d: -f1); do

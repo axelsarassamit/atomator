@@ -1,12 +1,13 @@
 #!/bin/bash
 set +e
+source ./credentials.conf 2>/dev/null || { echo "ERROR: credentials.conf not found!"; exit 1; }
 echo "=== Fix Static IP ==="
 echo "Converts the current DHCP address to a permanent static IP."
 echo ""
 for host in $(grep -v "^#" hosts.txt | grep -v "^$"); do
     echo "[$host] Setting static IP..."
-    sshpass -p 'sweetcom' ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 sweetagent@"$host" \
-        'echo sweetcom | sudo -S bash -c "
+    sshpass -p "$SSH_PASS" ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$SSH_USER"@"$host" \
+        'echo '"$SSH_PASS"' | sudo -S bash -c "
         DEV=\$(nmcli -t -f DEVICE,TYPE device | grep ethernet | head -1 | cut -d: -f1)
         CON_NAME=\$(nmcli -t -f NAME,TYPE connection show --active | grep ethernet | head -1 | cut -d: -f1)
         if [ -z \"\$CON_NAME\" ] || [ -z \"\$DEV\" ]; then echo \"No ethernet found\"; exit 1; fi

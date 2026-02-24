@@ -12,6 +12,15 @@ disk_space_*.txt
 uptime_*.txt
 services_*.txt
 
+# Credentials (sensitive)
+credentials.conf
+credentials.conf.bak
+watchdog_hosts.conf
+
+# Debug logs
+debug.log
+debug.log.1
+
 # Backups
 *.backup
 *.bak

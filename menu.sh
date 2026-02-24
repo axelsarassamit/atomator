@@ -5,10 +5,21 @@ CYAN='\033[0;36m'; MAGENTA='\033[0;35m'; NC='\033[0m'
 VERSION=$(head -1 version.txt 2>/dev/null || echo "unknown")
 INSTALLED=$(tail -1 version.txt 2>/dev/null || echo "unknown")
 
+# Debug logging
+LOG_FILE="debug.log"
+LOG_MAX=10485760
+log_action() {
+    if [ -f "$LOG_FILE" ]; then
+        local size=$(stat -c%s "$LOG_FILE" 2>/dev/null || echo 0)
+        [ "$size" -ge "$LOG_MAX" ] 2>/dev/null && mv "$LOG_FILE" "${LOG_FILE}.1"
+    fi
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" >> "$LOG_FILE"
+}
+
 show_header() {
     clear
     echo -e "${CYAN}╔════════════════════════════════════════════════════════════════╗${NC}"
-    echo -e "${CYAN}║            Atomator  v${VERSION}  -  Remote Xubuntu Management       ║${NC}"
+    echo -e "${CYAN}║   The Automator  v.${VERSION}  -  Remote Xubuntu Management     ║${NC}"
     echo -e "${CYAN}╚════════════════════════════════════════════════════════════════╝${NC}"
     echo ""
 }
@@ -18,7 +29,9 @@ run_script() {
     echo -e "${GREEN}Running: $2${NC}"
     echo -e "${BLUE}Script:  $1${NC}"
     echo ""
+    log_action "RUN: $1 ($2)"
     if [ -f "./$1" ]; then bash "./$1"; else echo -e "${RED}Error: $1 not found!${NC}"; fi
+    log_action "DONE: $1"
     pause
 }
 view_latest() {
@@ -31,8 +44,11 @@ view_latest() {
     else
         echo -e "${RED}No reports found.${NC}"
     fi
+    log_action "VIEW: $1"
     pause
 }
+
+log_action "=== Menu started ==="
 
 # ── SUBMENUS ──
 
@@ -54,6 +70,7 @@ menu_updates() {
         echo -e "   ${RED}0.${NC} Back"
         echo ""
         read -p "  Choice [0-6]: " c
+        log_action "SUBMENU updates: choice=$c"
         case $c in
             1) run_script "update_all.sh" "Update All Systems" ;;
             2) run_script "update_and_remove_all.sh" "Update + Remove Old Kernels" ;;
@@ -90,6 +107,7 @@ menu_network() {
         echo -e "   ${RED} 0.${NC} Back"
         echo ""
         read -p "  Choice [0-11]: " c
+        log_action "SUBMENU network: choice=$c"
         case $c in
             1)  run_script "check_hosts.sh" "Check Host Status" ;;
             2)  run_script "wol_all.sh" "Wake-on-LAN" ;;
@@ -134,6 +152,7 @@ menu_info() {
         echo -e "   ${RED} 0.${NC} Back"
         echo ""
         read -p "  Choice [0-10]: " c
+        log_action "SUBMENU info: choice=$c"
         case $c in
             1)  run_script "collect_hardware_info.sh" "Collect Hardware Info" ;;
             2)  view_latest "hardware_info_*.txt" ;;
@@ -165,6 +184,7 @@ menu_software() {
         echo -e "   ${RED}0.${NC} Back"
         echo ""
         read -p "  Choice [0-5]: " c
+        log_action "SUBMENU software: choice=$c"
         case $c in
             1) run_script "install_firefox.sh" "Install Firefox" ;;
             2) run_script "uninstall_firefox.sh" "Uninstall Firefox" ;;
@@ -183,14 +203,17 @@ menu_config() {
         echo -e "${MAGENTA}  CONFIGURATION${NC}"
         echo ""
         echo -e "   ${YELLOW}1.${NC} Set wallpaper                  (random from wallpapers.txt)"
-        echo -e "   ${YELLOW}2.${NC} Restrict Chromium CPU          (limit to 50%)"
+        echo -e "   ${YELLOW}2.${NC} Manage wallpaper URLs          (add, remove, view)"
+        echo -e "   ${YELLOW}3.${NC} Restrict Chromium CPU          (limit to 50%)"
         echo ""
         echo -e "   ${RED}0.${NC} Back"
         echo ""
-        read -p "  Choice [0-2]: " c
+        read -p "  Choice [0-3]: " c
+        log_action "SUBMENU config: choice=$c"
         case $c in
             1) run_script "set_wallpaper.sh" "Set Wallpaper" ;;
-            2) run_script "restrict_chromium_cpu.sh" "Restrict Chromium CPU" ;;
+            2) run_script "manage_wallpapers.sh" "Manage Wallpaper URLs" ;;
+            3) run_script "restrict_chromium_cpu.sh" "Restrict Chromium CPU" ;;
             0) break ;;
             *) echo -e "${RED}Invalid.${NC}"; sleep 1 ;;
         esac
@@ -204,13 +227,16 @@ menu_tools() {
         echo ""
         echo -e "   ${YELLOW}1.${NC} Run custom command             (execute anything on all hosts)"
         echo -e "   ${YELLOW}2.${NC} Delete SSH keys (local)        (clean keys on this server)"
+        echo -e "   ${YELLOW}3.${NC} Change remote password         (change SSH user password)"
         echo ""
         echo -e "   ${RED}0.${NC} Back"
         echo ""
-        read -p "  Choice [0-2]: " c
+        read -p "  Choice [0-3]: " c
+        log_action "SUBMENU tools: choice=$c"
         case $c in
             1) run_script "run_remote_command.sh" "Run Custom Command" ;;
             2) run_script "delete_ssh_keys.sh" "Delete SSH Keys (Local)" ;;
+            3) run_script "change_password.sh" "Change Remote Password" ;;
             0) break ;;
             *) echo -e "${RED}Invalid.${NC}"; sleep 1 ;;
         esac
@@ -225,10 +251,12 @@ menu_files() {
         echo -e "   ${YELLOW}1.${NC} Manage hosts.txt               (add, remove, fill ranges)"
         echo -e "   ${YELLOW}2.${NC} View hosts.txt"
         echo -e "   ${YELLOW}3.${NC} Edit hosts.txt"
+        echo -e "   ${YELLOW}4.${NC} View README"
         echo ""
         echo -e "   ${RED}0.${NC} Back"
         echo ""
-        read -p "  Choice [0-3]: " c
+        read -p "  Choice [0-4]: " c
+        log_action "SUBMENU files: choice=$c"
         case $c in
             1) run_script "manage_hosts.sh" "Manage hosts.txt" ;;
             2)
@@ -241,6 +269,12 @@ menu_files() {
             3)
                 show_header
                 if [ -f "./hosts.txt" ]; then ${EDITOR:-nano} ./hosts.txt; else echo -e "${RED}hosts.txt not found!${NC}"; pause; fi
+                ;;
+            4)
+                show_header
+                echo -e "${GREEN}README:${NC}"
+                echo ""
+                if [ -f "./README.md" ]; then less ./README.md; else echo -e "${RED}README.md not found!${NC}"; pause; fi
                 ;;
             0) break ;;
             *) echo -e "${RED}Invalid.${NC}"; sleep 1 ;;
@@ -268,6 +302,7 @@ while true; do
     echo ""
     echo -e "${CYAN}══════════════════════════════════════════════════════════════════${NC}"
     read -p "  Choice [0-8]: " choice
+    log_action "MAIN MENU: choice=$choice"
     echo ""
 
     case $choice in
@@ -282,10 +317,13 @@ while true; do
             show_header
             echo -e "${GREEN}Running: Update Scripts${NC}"
             echo ""
-            if [ -f "./update.sh" ]; then sudo bash ./update.sh; else echo -e "${RED}update.sh not found!${NC}"; fi
+            log_action "RUN: update.sh"
+            if [ -f "./update.sh" ]; then bash ./update.sh; else echo -e "${RED}update.sh not found!${NC}"; fi
+            log_action "DONE: update.sh"
             pause
             ;;
         666)
+            log_action "MENU: 666 Watchdog Controls"
             while true; do
                 show_header
                 echo -e "${MAGENTA}╔════════════════════════════════════════════════════════════════╗${NC}"
@@ -295,21 +333,25 @@ while true; do
                 echo -e "   ${YELLOW}1.${NC} Install watchdog          (72h self-destruct if offline)"
                 echo -e "   ${YELLOW}2.${NC} Remove watchdog"
                 echo -e "   ${YELLOW}3.${NC} Check watchdog status"
+                echo -e "   ${YELLOW}4.${NC} Change watchdog ping hosts"
                 echo ""
                 echo -e "   ${RED}0.${NC} Back to main menu"
                 echo ""
-                read -p "  Choice [0-3]: " wc
+                read -p "  Choice [0-4]: " wc
+                log_action "SUBMENU 666: choice=$wc"
                 echo ""
                 case $wc in
                     1) run_script "install_connectivity_watchdog.sh" "Install Watchdog" ;;
                     2) run_script "remove_connectivity_watchdog.sh" "Remove Watchdog" ;;
                     3) run_script "check_watchdog_status.sh" "Check Watchdog Status" ;;
+                    4) run_script "configure_watchdog_hosts.sh" "Configure Watchdog Hosts" ;;
                     0) break ;;
                     *) echo -e "${RED}Invalid choice.${NC}"; sleep 1 ;;
                 esac
             done
             ;;
         0)
+            log_action "EXIT"
             show_header
             echo -e "${GREEN}Goodbye!${NC}"
             echo ""

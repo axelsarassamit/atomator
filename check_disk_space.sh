@@ -1,12 +1,13 @@
 #!/bin/bash
 set +e
+source ./credentials.conf 2>/dev/null || { echo "ERROR: credentials.conf not found!"; exit 1; }
 echo "=== Check Disk Space ==="
 echo "Shows disk usage on all hosts. Warns if over 80%."
 echo ""
 OUTPUT_FILE="disk_space_$(date +%Y%m%d_%H%M%S).txt"
 echo "Disk Space Report - $(date)" > "$OUTPUT_FILE"
 for host in $(grep -v "^#" hosts.txt | grep -v "^$"); do
-    RESULT=$(sshpass -p 'sweetcom' ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 sweetagent@"$host" \
+    RESULT=$(sshpass -p "$SSH_PASS" ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$SSH_USER"@"$host" \
         'echo "$(hostname)|$(df -h / | awk "NR==2{print \$5}" | tr -d "%")|$(df -h / | awk "NR==2{print \$2}")|$(df -h / | awk "NR==2{print \$4}")"' 2>/dev/null) || true
     if [ -n "$RESULT" ]; then
         HNAME=$(echo "$RESULT" | cut -d'|' -f1); USAGE=$(echo "$RESULT" | cut -d'|' -f2)

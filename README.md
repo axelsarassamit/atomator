@@ -1,6 +1,6 @@
-# Atomator - Remote Xubuntu Management
+# The Automator - Remote Xubuntu Management
 
-Manage multiple Xubuntu computers remotely from a central Debian server via SSH. One menu, 34 scripts, full control.
+Manage multiple Xubuntu computers remotely from a central Debian server via SSH. One menu, 37 scripts, full control.
 
 ## Quick Start
 
@@ -12,7 +12,7 @@ sudo bash quick_install.sh
 bash /root/start.sh
 ```
 
-That's it. All 34 scripts are installed to `/remote_tools/`, ready to use.
+That's it. All 37 scripts are installed to `/remote_tools/`, ready to use.
 
 ---
 
@@ -20,6 +20,7 @@ That's it. All 34 scripts are installed to `/remote_tools/`, ready to use.
 
 - [Requirements](#requirements)
 - [Installation](#installation)
+- [Credentials](#credentials)
 - [How It Works](#how-it-works)
 - [Menu Navigation](#menu-navigation)
 - [Scripts Reference](#scripts-reference)
@@ -34,6 +35,7 @@ That's it. All 34 scripts are installed to `/remote_tools/`, ready to use.
 - [Report Viewers](#report-viewers)
 - [Managing Hosts](#managing-hosts)
 - [Updating](#updating)
+- [Debug Logging](#debug-logging)
 - [File Structure](#file-structure)
 - [Version History](#version-history)
 
@@ -49,7 +51,7 @@ That's it. All 34 scripts are installed to `/remote_tools/`, ready to use.
 **Target computers:**
 - Xubuntu (or any Ubuntu/Debian based distro)
 - SSH enabled
-- User account: `sweetagent` with sudo privileges
+- A user account with sudo privileges (configured in `credentials.conf`)
 - NetworkManager for network scripts
 
 **Installed automatically by the installer:**
@@ -71,14 +73,20 @@ That's it. All 34 scripts are installed to `/remote_tools/`, ready to use.
 sudo bash quick_install.sh
 ```
 
-3. Add your target computer IPs:
+3. Edit your credentials (default: `sweetagent`/`sweetcom`):
+
+```bash
+nano /remote_tools/credentials.conf
+```
+
+4. Add your target computer IPs:
 
 ```bash
 bash /root/start.sh
 # Main menu -> 7. File Management -> 1. Manage hosts.txt
 ```
 
-4. Test connectivity:
+5. Test connectivity:
 
 ```bash
 # Main menu -> 2. Network -> 1. Check host status
@@ -88,13 +96,38 @@ bash /root/start.sh
 
 - Creates `/remote_tools/` directory
 - Installs required packages (sshpass, wakeonlan, bc, curl)
-- Generates all 34 management scripts
+- Generates all 37 management scripts
 - Creates the interactive menu (`menu.sh`) with submenus
 - Creates `/root/start.sh` for quick launch
+- Creates `credentials.conf` with SSH credentials (mode 600, root only)
+- Creates `watchdog_hosts.conf` for connectivity watchdog settings
 - Creates `version.txt` with version number and install date
-- Creates `update_vX.X.X.sh` for future re-installs
+- Creates `updates/` directory and stores the installer for future reverts
+- Creates `CHANGELOG.md` with version history
+- Creates `README.md` viewable from the menu
 - Sets directory permissions to 700 (root only)
-- Preserves existing `hosts.txt` if upgrading
+- Preserves existing `hosts.txt`, `credentials.conf`, `wallpapers.txt`, and `mac_addresses.txt` if upgrading
+
+---
+
+## Credentials
+
+SSH credentials are stored in `/remote_tools/credentials.conf`:
+
+```
+SSH_USER=sweetagent
+SSH_PASS=sweetcom
+```
+
+This file is:
+- Created automatically on first install with default values
+- **Never overwritten** by updates (your credentials are preserved)
+- Set to mode 600 (readable only by root)
+- Used by all 29 SSH-based scripts at runtime
+
+**Change your credentials** by either:
+- Editing the file directly: `nano /remote_tools/credentials.conf`
+- Using the password change script: Main menu → 6. Tools → 3. Change remote password (updates both the remote machines and `credentials.conf`)
 
 ---
 
@@ -102,11 +135,12 @@ bash /root/start.sh
 
 Every script follows the same pattern:
 
-1. Reads IP addresses from `hosts.txt`
-2. Connects to each host via SSH using the `sweetagent` account
-3. Runs commands with sudo on the remote machine
-4. Reports success or failure for each host
-5. Continues to the next host even if one fails
+1. Loads credentials from `credentials.conf`
+2. Reads IP addresses from `hosts.txt`
+3. Connects to each host via SSH using the configured account
+4. Runs commands with sudo on the remote machine
+5. Reports success or failure for each host
+6. Continues to the next host even if one fails
 
 Lines starting with `#` in `hosts.txt` are ignored (comments). Empty lines are skipped.
 
@@ -129,9 +163,9 @@ Main Menu
 ├── 2. Network                       (11 options)
 ├── 3. Information & Reports         (10 options)
 ├── 4. Software                      (5 options)
-├── 5. Configuration                 (2 options)
-├── 6. Tools                         (2 options)
-├── 7. File Management               (3 options)
+├── 5. Configuration                 (3 options)
+├── 6. Tools                         (3 options)
+├── 7. File Management               (4 options)
 ├── 8. Update Scripts
 └── 0. Exit
 ```
@@ -142,6 +176,8 @@ The menu header shows:
 - Current version number
 - Number of hosts loaded from `hosts.txt`
 - Install date
+
+All menu navigation is logged to `debug.log` for troubleshooting.
 
 ---
 
@@ -207,6 +243,7 @@ Each data collection script saves results to a timestamped file. Use the "View l
 |---|--------|-------------|
 | 1 | `set_wallpaper.sh` | Picks a random URL from `wallpapers.txt`, downloads the image, and sets it as wallpaper for all users on all hosts. Works with XFCE desktop. Create a `wallpapers.txt` file with one image URL per line. |
 | 2 | `restrict_chromium_cpu.sh` | Installs `cpulimit` and creates a systemd service that limits all Chromium processes to 50% CPU. Prevents Chromium from eating all system resources. Starts automatically on boot. |
+| 3 | `manage_wallpapers.sh` | Interactive menu to manage `wallpapers.txt`: add URLs, remove entries, view current list, or clear all. |
 
 ### 6. Tools
 
@@ -214,6 +251,7 @@ Each data collection script saves results to a timestamped file. Use the "View l
 |---|--------|-------------|
 | 1 | `run_remote_command.sh` | Prompts you for a command, then runs it as root on every host. Full output is shown for each host. Use this for one-off commands you don't have a script for. |
 | 2 | `delete_ssh_keys.sh` | Deletes all SSH keys for all users and root on **this server only** (not remote hosts). Clears known_hosts and authorized_keys, then regenerates the host keys. Asks for confirmation. |
+| 3 | `change_password.sh` | Changes the SSH user's password on all remote hosts. Asks for the new password (with confirmation), updates each host, then saves the new password to `credentials.conf`. |
 
 ### 7. File Management
 
@@ -222,12 +260,16 @@ Each data collection script saves results to a timestamped file. Use the "View l
 | 1 | Manage hosts.txt | Interactive submenu: fill with an IP range, add/remove individual hosts, remove duplicates, sort, count, or restore from backup. |
 | 2 | View hosts.txt | Displays the contents of `hosts.txt` with line numbers. |
 | 3 | Edit hosts.txt | Opens `hosts.txt` in nano (or your default editor). |
+| 4 | View README | Displays the README documentation using `less`. |
 
 ### 8. Update Scripts
 
-Runs `update.sh` which gives you two options:
-1. **Update from local file** - Uses an `update_vX.X.X.sh` file already in `/remote_tools/`
+Runs `update.sh` which gives you three options:
+1. **Update from local file** - Uses an update file already in `/remote_tools/updates/`
 2. **Download latest from GitHub** - Downloads the latest version directly from the repository
+3. **Revert to a previous version** - Lists all stored versions in `updates/` and lets you pick one to revert to
+
+The update process shows a changelog of what changed between your current version and the new version.
 
 See [Updating](#updating) for details.
 
@@ -301,43 +343,51 @@ After adding hosts, use Network → Check host status to see which are online an
 1. Open the menu: `bash /root/start.sh`
 2. Choose option **8** (Update Scripts)
 3. Choose option **2** (Download latest from GitHub)
-4. Review the version comparison and confirm
+4. Review the version comparison and changelog, then confirm
 
 Or run directly:
 ```bash
-cd /remote_tools && sudo bash update.sh
+cd /remote_tools && bash update.sh
 ```
 
 **Option 2: Update from local file**
 
 1. Get the new `quick_install.sh`
-2. Rename it with the version number:
+2. Copy it to the server's updates directory:
    ```bash
-   mv quick_install.sh update_v2.1.0.sh
+   scp quick_install.sh root@your-server:/remote_tools/updates/
    ```
-3. Copy it to the server:
+3. Run the update from the menu (option 8) or directly:
    ```bash
-   scp update_v2.1.0.sh root@your-server:/remote_tools/
+   cd /remote_tools && bash update.sh
    ```
-4. Run the update from the menu (option 8) or directly:
-   ```bash
-   cd /remote_tools && sudo bash update.sh
-   ```
+
+**Option 3: Revert to a previous version**
+
+1. Open the menu: `bash /root/start.sh`
+2. Choose option **8** (Update Scripts)
+3. Choose option **3** (Revert to a previous version)
+4. Pick from the list of stored versions in `updates/`
+
+### Update Catalog
+
+Every update is stored in the `updates/` directory. This means you can always roll back to any previous version. Files are named `update_v.XX.YY.AA.sh` (e.g. `update_v.02.01.00.sh`).
 
 ### What Happens During Update
 
 1. Shows your current version and install date
-2. Lets you choose local file or GitHub download
-3. Shows version comparison and asks for confirmation
-4. Backs up `hosts.txt`, `mac_addresses.txt`, and `wallpapers.txt`
-5. Runs the new installer (overwrites all scripts)
-6. Restores config files if they were lost
-7. Keeps the update file for future re-installs
+2. Lets you choose local file, GitHub download, or revert
+3. Shows version comparison and changelog between versions
+4. Asks for confirmation
+5. Backs up `hosts.txt`, `mac_addresses.txt`, `wallpapers.txt`, and `credentials.conf`
+6. Runs the new installer (overwrites all scripts)
+7. Restores config files if they were lost
+8. Stores the update file in `updates/` for future reverts
 
 ### Version Tracking
 
 The file `version.txt` in `/remote_tools/` contains:
-- Line 1: Version number (e.g. `2.0.0`)
+- Line 1: Version number (e.g. `02.01.00`)
 - Line 2: Install date and time
 
 The menu header always shows the current version and install date.
@@ -348,8 +398,25 @@ These files are **never overwritten** by the installer:
 - `hosts.txt` (your IP list)
 - `mac_addresses.txt` (collected MAC addresses)
 - `wallpapers.txt` (your wallpaper URLs)
+- `credentials.conf` (your SSH credentials)
+- `watchdog_hosts.conf` (your watchdog ping hosts)
 
 Everything else (all scripts, menu, update.sh) is regenerated fresh.
+
+---
+
+## Debug Logging
+
+All menu navigation is logged to `/remote_tools/debug.log` with timestamps:
+
+```
+[2026-02-24 10:15:32] MENU: main > choice=1 (System Updates)
+[2026-02-24 10:15:35] SUBMENU: updates > choice=1 (Update All)
+[2026-02-24 10:15:35] Running script: update_all.sh
+[2026-02-24 10:20:12] Script finished: update_all.sh
+```
+
+The log file automatically rotates at 10MB (old log saved as `debug.log.1`). Only menu navigation and script start/finish events are logged, not script output.
 
 ---
 
@@ -359,13 +426,19 @@ After installation, `/remote_tools/` contains:
 
 ```
 /remote_tools/
+  credentials.conf                 # SSH credentials (mode 600, root only)
   hosts.txt                        # Your target IPs (created on first install)
   mac_addresses.txt                # Collected MAC addresses (after running collection)
   wallpapers.txt                   # Wallpaper URLs (create manually)
+  watchdog_hosts.conf              # Watchdog ping host configuration
   version.txt                      # Current version + install date
+  CHANGELOG.md                     # Version history with changes
+  README.md                        # This documentation (viewable from menu)
+  debug.log                        # Menu navigation log (auto-created)
   menu.sh                          # Interactive menu with submenus
-  update.sh                        # Update script (local + GitHub)
-  update_v2.0.0.sh                 # Install file (kept for re-installs)
+  update.sh                        # Update script (local + GitHub + revert)
+  updates/                         # Update catalog (versioned install files)
+    update_v.02.01.00.sh           #   Stored installer for each version
   update_all.sh                    # System update
   update_and_remove_all.sh         # System update + kernel cleanup
   disable_auto_updates.sh          # Disable unattended-upgrades
@@ -392,10 +465,16 @@ After installation, `/remote_tools/` contains:
   install_wine.sh                  # Install Wine
   remove_wine.sh                   # Remove Wine
   set_wallpaper.sh                 # Set wallpaper
+  manage_wallpapers.sh             # Manage wallpaper URLs
   restrict_chromium_cpu.sh         # Restrict Chromium CPU
   run_remote_command.sh            # Run custom command
   delete_ssh_keys.sh               # Delete SSH keys (local)
+  change_password.sh               # Change remote password
   manage_hosts.sh                  # Manage hosts.txt
+  install_connectivity_watchdog.sh # Install network watchdog
+  remove_connectivity_watchdog.sh  # Remove network watchdog
+  check_watchdog_status.sh         # Check watchdog status
+  configure_watchdog_hosts.sh      # Configure watchdog ping hosts
 
 /root/
   start.sh                         # Quick launcher: cd /remote_tools && bash menu.sh
@@ -407,5 +486,6 @@ After installation, `/remote_tools/` contains:
 
 | Version | Date | Changes |
 |---------|------|---------|
-| 2.0.0 | 2026-02-23 | Submenu system (8 categories), report viewers for all data collectors, GitHub update support, delete SSH keys now local-only, timestamped output files for disk/uptime/services scripts. |
-| 1.0.0 | 2026-02-23 | Complete rewrite. 34 scripts, new menu with descriptions, version system, update mechanism. Added shutdown, disk space, uptime, services scripts. Consistent error handling across all scripts. |
+| v.02.01.00 | 2026-02-24 | Renamed to "The Automator". New version format v.XX.YY.AA. Credentials system (`credentials.conf`) replaces hardcoded passwords. Password change script. Debug menu logging. Update catalog with version revert. Changelog display on updates. Wallpaper management script. Watchdog host configuration. View README from menu. Fixed: sudo command not found in update menu. |
+| v.02.00.00 | 2026-02-23 | Submenu system (8 categories), report viewers for all data collectors, GitHub update support, delete SSH keys now local-only, timestamped output files for disk/uptime/services scripts. |
+| v.01.00.00 | 2026-02-23 | Complete rewrite. 34 scripts, new menu with descriptions, version system, update mechanism. Added shutdown, disk space, uptime, services scripts. Consistent error handling across all scripts. |

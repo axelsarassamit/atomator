@@ -1,5 +1,6 @@
 #!/bin/bash
 set +e
+source ./credentials.conf 2>/dev/null || { echo "ERROR: credentials.conf not found!"; exit 1; }
 echo "=== Disable WiFi ==="
 echo "Permanently disables WiFi on all hosts via rfkill and NetworkManager."
 echo ""
@@ -33,9 +34,9 @@ echo "WiFi disabled permanently"
 SCRIPT
 for host in $(grep -v "^#" hosts.txt | grep -v "^$"); do
     echo "[$host] Disabling WiFi..."
-    sshpass -p 'sweetcom' scp -o StrictHostKeyChecking=no "$LOCAL_SCRIPT" sweetagent@"$host":"$REMOTE_SCRIPT" 2>/dev/null || true
-    sshpass -p 'sweetcom' ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 sweetagent@"$host" \
-        "echo sweetcom | sudo -S bash $REMOTE_SCRIPT && rm -f $REMOTE_SCRIPT" 2>&1 && echo "[$host] OK" || echo "[$host] FAILED"
+    sshpass -p "$SSH_PASS" scp -o StrictHostKeyChecking=no "$LOCAL_SCRIPT" "$SSH_USER"@"$host":"$REMOTE_SCRIPT" 2>/dev/null || true
+    sshpass -p "$SSH_PASS" ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$SSH_USER"@"$host" \
+        "echo $SSH_PASS | sudo -S bash $REMOTE_SCRIPT && rm -f $REMOTE_SCRIPT" 2>&1 && echo "[$host] OK" || echo "[$host] FAILED"
 done
 rm -f "$LOCAL_SCRIPT"
 echo ""

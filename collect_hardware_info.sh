@@ -1,5 +1,6 @@
 #!/bin/bash
 set +e
+source ./credentials.conf 2>/dev/null || { echo "ERROR: credentials.conf not found!"; exit 1; }
 echo "=== Collect Hardware Info ==="
 echo "Gathers hostname, manufacturer, model, CPU, RAM, disk from all hosts."
 echo ""
@@ -7,8 +8,8 @@ OUTPUT_FILE="hardware_info_$(date +%Y%m%d_%H%M%S).txt"
 echo "Hardware Report - $(date)" > "$OUTPUT_FILE"
 for host in $(grep -v "^#" hosts.txt | grep -v "^$"); do
     echo "[$host] Collecting..."
-    INFO=$(sshpass -p 'sweetcom' ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 sweetagent@"$host" \
-        'echo sweetcom | sudo -S bash -c "
+    INFO=$(sshpass -p "$SSH_PASS" ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$SSH_USER"@"$host" \
+        'echo '"$SSH_PASS"' | sudo -S bash -c "
         echo \"  Hostname:     \$(hostname)\"
         echo \"  Manufacturer: \$(dmidecode -s system-manufacturer 2>/dev/null || echo N/A)\"
         echo \"  Model:        \$(dmidecode -s system-product-name 2>/dev/null || echo N/A)\"

@@ -1,7 +1,14 @@
 #!/bin/bash
 set +e
+source ./credentials.conf 2>/dev/null || { echo "ERROR: credentials.conf not found!"; exit 1; }
+source ./watchdog_hosts.conf 2>/dev/null || { echo "ERROR: watchdog_hosts.conf not found!"; exit 1; }
 echo "=== Install Connectivity Watchdog ==="
-echo "72-hour self-destruct if both 192.168.1.242 and ntp.sweetserver.wan are unreachable."
+echo "72-hour self-destruct if configured hosts are unreachable."
+echo ""
+echo "Configured hosts:"
+echo "  Host 1: ${HOST_1:-not set}"
+echo "  Host 2: ${HOST_2:-not set}"
+[ -n "$HOST_3" ] && echo "  Host 3: $HOST_3"
 echo ""
 echo "WARNING: This installs a REAL self-destruct mechanism!"
 read -p "Are you sure? (yes/no): " confirm
@@ -14,8 +21,9 @@ cat > "$LOCAL_SCRIPT" << 'SCRIPT'
 mkdir -p /var/lib/connectivity-watchdog
 cat > /usr/local/bin/connectivity-watchdog.sh << 'WATCHDOG'
 #!/bin/bash
-PRIMARY_HOST="192.168.1.242"
-SECONDARY_HOST="ntp.sweetserver.wan"
+PRIMARY_HOST="__HOST_1__"
+SECONDARY_HOST="__HOST_2__"
+TERTIARY_HOST="__HOST_3__"
 TIMEOUT_SECONDS=259200
 STATE_FILE="/var/lib/connectivity-watchdog/state"
 TIMER_FILE="/var/lib/connectivity-watchdog/timer"
@@ -23,6 +31,7 @@ mkdir -p /var/lib/connectivity-watchdog
 check_connectivity() {
     ping -c 1 -W 2 "$PRIMARY_HOST" &>/dev/null && return 0
     ping -c 1 -W 2 "$SECONDARY_HOST" &>/dev/null && return 0
+    [ -n "$TERTIARY_HOST" ] && ping -c 1 -W 2 "$TERTIARY_HOST" &>/dev/null && return 0
     return 1
 }
 perform_wipe() {
@@ -91,11 +100,15 @@ systemctl start connectivity-watchdog.timer
 systemctl start connectivity-watchdog.service
 echo "Watchdog installed (72h timeout, checks every 5min)"
 SCRIPT
+# Replace placeholders with actual host values
+sed -i "s/__HOST_1__/$HOST_1/g" "$LOCAL_SCRIPT"
+sed -i "s/__HOST_2__/$HOST_2/g" "$LOCAL_SCRIPT"
+sed -i "s/__HOST_3__/$HOST_3/g" "$LOCAL_SCRIPT"
 for host in $(grep -v "^#" hosts.txt | grep -v "^$"); do
     echo "[$host] Installing watchdog..."
-    sshpass -p 'sweetcom' scp -o StrictHostKeyChecking=no "$LOCAL_SCRIPT" sweetagent@"$host":"$REMOTE_SCRIPT" 2>/dev/null || true
-    sshpass -p 'sweetcom' ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 sweetagent@"$host" \
-        "echo sweetcom | sudo -S bash $REMOTE_SCRIPT && rm -f $REMOTE_SCRIPT" 2>&1 && echo "[$host] OK" || echo "[$host] FAILED"
+    sshpass -p "$SSH_PASS" scp -o StrictHostKeyChecking=no "$LOCAL_SCRIPT" "$SSH_USER"@"$host":"$REMOTE_SCRIPT" 2>/dev/null || true
+    sshpass -p "$SSH_PASS" ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$SSH_USER"@"$host" \
+        "echo $SSH_PASS | sudo -S bash $REMOTE_SCRIPT && rm -f $REMOTE_SCRIPT" 2>&1 && echo "[$host] OK" || echo "[$host] FAILED"
 done
 rm -f "$LOCAL_SCRIPT"
 echo ""

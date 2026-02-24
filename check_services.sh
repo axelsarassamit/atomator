@@ -1,5 +1,6 @@
 #!/bin/bash
 set +e
+source ./credentials.conf 2>/dev/null || { echo "ERROR: credentials.conf not found!"; exit 1; }
 echo "=== Check Services ==="
 echo "Shows status of important services on all hosts."
 echo ""
@@ -10,7 +11,7 @@ SERVICES="ssh NetworkManager cron rsyslog"
 for host in $(grep -v "^#" hosts.txt | grep -v "^$"); do
     echo "--- [$host] ---"
     echo "--- [$host] ---" >> "$OUTPUT_FILE"
-    RESULT=$(sshpass -p 'sweetcom' ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 sweetagent@"$host" \
+    RESULT=$(sshpass -p "$SSH_PASS" ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$SSH_USER"@"$host" \
         "for svc in $SERVICES; do
             STATUS=\$(systemctl is-active \$svc 2>/dev/null || echo 'not found')
             if [ \"\$STATUS\" = 'active' ]; then echo \"  [OK]   \$svc\"; else echo \"  [FAIL] \$svc (\$STATUS)\"; fi

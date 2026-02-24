@@ -1,12 +1,13 @@
 #!/bin/bash
 set +e
+source ./credentials.conf 2>/dev/null || { echo "ERROR: credentials.conf not found!"; exit 1; }
 echo "=== Restrict Chromium CPU ==="
 echo "Limits Chromium to 50% CPU using cpulimit systemd service."
 echo ""
 for host in $(grep -v "^#" hosts.txt | grep -v "^$"); do
     echo "[$host] Setting up CPU limiter..."
-    sshpass -p 'sweetcom' ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 sweetagent@"$host" \
-        'echo sweetcom | sudo -S bash -c "
+    sshpass -p "$SSH_PASS" ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$SSH_USER"@"$host" \
+        'echo '"$SSH_PASS"' | sudo -S bash -c "
         DEBIAN_FRONTEND=noninteractive apt-get install -y cpulimit 2>/dev/null || true
         cat > /etc/systemd/system/chromium-cpu-limit.service << SERVICE
 [Unit]

@@ -1,12 +1,13 @@
 #!/bin/bash
 set +e
+source ./credentials.conf 2>/dev/null || { echo "ERROR: credentials.conf not found!"; exit 1; }
 echo "=== Lock Network Settings ==="
 echo "Requires sudo password to change network settings (polkit rule)."
 echo ""
 for host in $(grep -v "^#" hosts.txt | grep -v "^$"); do
     echo "[$host] Locking network..."
-    sshpass -p 'sweetcom' ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 sweetagent@"$host" \
-        'echo sweetcom | sudo -S bash -c "
+    sshpass -p "$SSH_PASS" ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$SSH_USER"@"$host" \
+        'echo '"$SSH_PASS"' | sudo -S bash -c "
         mkdir -p /etc/polkit-1/localauthority/50-local.d
         cat > /etc/polkit-1/localauthority/50-local.d/restrict-network.pkla << POLKIT
 [Restrict Network Manager]
