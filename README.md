@@ -185,6 +185,8 @@ All menu navigation is logged to `debug.log` for troubleshooting.
 
 ### 1. System Updates & Maintenance
 
+![System Updates & Maintenance](screenshots/menu_updates.png)
+
 | # | Script | Description |
 |---|--------|-------------|
 | 1 | `update_all.sh` | Runs `apt update`, `apt upgrade`, `autoremove` and `autoclean` on every host. Uses non-interactive mode to avoid prompts. Keeps existing config files when packages ask. |
@@ -195,6 +197,8 @@ All menu navigation is logged to `debug.log` for troubleshooting.
 | 6 | `shutdown_all.sh` | Shuts down all hosts. Asks for confirmation before sending the command. |
 
 ### 2. Network
+
+![Network](screenshots/menu_network.png)
 
 | # | Script | Description |
 |---|--------|-------------|
@@ -211,6 +215,8 @@ All menu navigation is logged to `debug.log` for troubleshooting.
 | 11 | `disable_wifi.sh` | Permanently disables WiFi: turns off radio, blocks with rfkill, blacklists common WiFi kernel modules, and configures NetworkManager to ignore WiFi devices. |
 
 ### 3. Information & Reports
+
+![Information & Reports](screenshots/menu_reports.png)
 
 Each data collection script saves results to a timestamped file. Use the "View latest" option to see the most recent report without re-running the collection.
 
@@ -229,6 +235,8 @@ Each data collection script saves results to a timestamped file. Use the "View l
 
 ### 4. Software
 
+![Software](screenshots/menu_software.png)
+
 | # | Script | Description |
 |---|--------|-------------|
 | 1 | `install_firefox.sh` | Installs Firefox (or Firefox ESR as fallback) and creates a desktop shortcut for all users. |
@@ -239,6 +247,8 @@ Each data collection script saves results to a timestamped file. Use the "View l
 
 ### 5. Configuration
 
+![Configuration](screenshots/menu_config.png)
+
 | # | Script | Description |
 |---|--------|-------------|
 | 1 | `set_wallpaper.sh` | Picks a random URL from `wallpapers.txt`, downloads the image, and sets it as wallpaper for all users on all hosts. Works with XFCE desktop. Create a `wallpapers.txt` file with one image URL per line. |
@@ -246,6 +256,8 @@ Each data collection script saves results to a timestamped file. Use the "View l
 | 3 | `manage_wallpapers.sh` | Interactive menu to manage `wallpapers.txt`: add URLs, remove entries, view current list, or clear all. |
 
 ### 6. Tools
+
+![Tools](screenshots/menu_tools.png)
 
 | # | Script | Description |
 |---|--------|-------------|
@@ -255,6 +267,8 @@ Each data collection script saves results to a timestamped file. Use the "View l
 
 ### 7. File Management
 
+![File Management](screenshots/menu_files.png)
+
 | # | Option | Description |
 |---|--------|-------------|
 | 1 | Manage hosts.txt | Interactive submenu: fill with an IP range, add/remove individual hosts, remove duplicates, sort, count, or restore from backup. |
@@ -263,6 +277,8 @@ Each data collection script saves results to a timestamped file. Use the "View l
 | 4 | View README | Displays the README documentation using `less`. |
 
 ### 8. Update Scripts
+
+![Update Scripts](screenshots/menu_update.png)
 
 Runs `update.sh` which gives you three options:
 1. **Update from local file** - Uses an update file already in `/remote_tools/updates/`
