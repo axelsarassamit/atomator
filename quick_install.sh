@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ============================================================================
-# The Automator - Remote Xubuntu Management - Quick Installer
+# Atomator - Remote Xubuntu Management - Quick Installer
 # Creates all management scripts in /remote_tools/
 # Run on your Debian server: sudo bash quick_install.sh
 # ============================================================================
@@ -13,7 +13,7 @@ set -e
 TARGET_DIR="/remote_tools"
 
 echo "╔════════════════════════════════════════════════════════════════╗"
-echo "║   The Automator - Remote Xubuntu Management  v.${VERSION}       ║"
+echo "║   Atomator - Remote Xubuntu Management  v.${VERSION}             ║"
 echo "╚════════════════════════════════════════════════════════════════╝"
 echo ""
 echo "This will create all management scripts in: $TARGET_DIR"
@@ -44,7 +44,7 @@ echo ""
 # Create hosts.txt if missing
 if [ ! -f hosts.txt ]; then
 cat > hosts.txt << 'HOSTSEOF'
-# The Automator - Host List
+# Atomator - Host List
 # One IP address per line. Lines starting with # are ignored.
 #
 # Example:
@@ -1590,7 +1590,7 @@ RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC
 TARGET_DIR="/remote_tools"
 GITHUB_URL="https://raw.githubusercontent.com/axelsarassamit/atomator/main/quick_install.sh"
 
-echo -e "${CYAN}=== The Automator - Update Scripts ===${NC}"
+echo -e "${CYAN}=== Atomator - Update Scripts ===${NC}"
 echo ""
 
 # Show current version
@@ -1758,7 +1758,7 @@ echo "  [37/37] update.sh"
 # CHANGELOG.md
 # ============================================================================
 cat > CHANGELOG.md << 'CLEOF'
-# The Automator - Changelog
+# Atomator - Changelog
 
 ## v.01.00.00
 - Initial complete rewrite
@@ -1773,7 +1773,7 @@ cat > CHANGELOG.md << 'CLEOF'
 - Timestamped output files
 
 ## v.02.01.00
-- Renamed to "The Automator"
+- Renamed to "Atomator"
 - New version format v.XX.YY.AA
 - Credentials system (credentials.conf) - no more hardcoded passwords
 - Password change script for remote hosts
@@ -1823,7 +1823,7 @@ echo "  Created CHANGELOG.md"
 # README.md (embedded for menu viewer)
 # ============================================================================
 cat > README.md << 'RDEOF'
-# The Automator - Remote Xubuntu Management
+# Atomator - Remote Xubuntu Management
 
 A comprehensive remote management system for Xubuntu computers controlled
 from a central Debian server via SSH.
@@ -1906,7 +1906,7 @@ log_action() {
 show_header() {
     clear
     echo -e "${CYAN}╔════════════════════════════════════════════════════════════════╗${NC}"
-    echo -e "${CYAN}║   The Automator  v.${VERSION}  -  Remote Xubuntu Management     ║${NC}"
+    echo -e "${CYAN}║   Atomator  v.${VERSION}  -  Remote Xubuntu Management           ║${NC}"
     echo -e "${CYAN}╚════════════════════════════════════════════════════════════════╝${NC}"
     echo ""
 }

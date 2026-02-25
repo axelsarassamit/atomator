@@ -1,4 +1,4 @@
-# The Automator - Changelog
+# Atomator - Changelog
 
 ## v.01.00.00
 - Initial complete rewrite
@@ -13,7 +13,7 @@
 - Timestamped output files
 
 ## v.02.01.00
-- Renamed to "The Automator"
+- Renamed to "Atomator"
 - New version format v.XX.YY.AA
 - Credentials system (credentials.conf) - no more hardcoded passwords
 - Password change script for remote hosts
