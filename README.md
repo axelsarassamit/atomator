@@ -73,7 +73,7 @@ That's it. All 37 scripts are installed to `/remote_tools/`, ready to use.
 sudo bash quick_install.sh
 ```
 
-3. Edit your credentials (default: `sweetagent`/`sweetcom`):
+3. Edit your credentials (default: `XXXXXXX`/`XXXXXXX`):
 
 ```bash
 nano /remote_tools/credentials.conf
