@@ -115,8 +115,8 @@ bash /root/start.sh
 SSH credentials are stored in `/remote_tools/credentials.conf`:
 
 ```
-SSH_USER=sweetagent
-SSH_PASS=sweetcom
+SSH_USER=XXXXXXX
+SSH_PASS=XXXXXXX
 ```
 
 This file is:
