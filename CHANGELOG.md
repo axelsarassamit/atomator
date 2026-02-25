@@ -1,5 +1,8 @@
 # The Automator - Changelog
 
+## v.02.03.01
+- Update screen now shows changelog from the NEW version instead of the old one
+
 ## v.02.03.00
 - fix_static_ip.sh now derives IP from gateway + hostname digits
 - IP = gateway first 3 octets + last digits of computer name (e.g. BKSAL058 = .58)

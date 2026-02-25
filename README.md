@@ -486,6 +486,7 @@ After installation, `/remote_tools/` contains:
 
 | Version | Date | Changes |
 |---------|------|---------|
+| v.02.03.01 | 2026-02-25 | Update screen now shows changelog from the new version being installed instead of the old one. |
 | v.02.03.00 | 2026-02-25 | fix_static_ip.sh derives IP from gateway + hostname digits instead of keeping DHCP address. |
 | v.02.02.01 | 2026-02-25 | Custom DNS option in fix_static_ip.sh (keep current / Cloudflare+Google+Quad9 / custom) and change_dns.sh (Cloudflare+Google+Quad9 / custom). |
 | v.02.02.00 | 2026-02-24 | Standardized all 6 report files to consistent TSV format. All reports have header, tab-separated column headers, one row per host. Easy to copy-paste into spreadsheets. Added Used column to disk space, flattened services to one row per host, parsed speedtest into columns. |
