@@ -203,7 +203,7 @@ All menu navigation is logged to `debug.log` for troubleshooting.
 | 3 | `collect_mac_addresses.sh` | Connects to each host, reads the MAC address of the primary ethernet interface, and saves it to `mac_addresses.txt`. Required before using Wake-on-LAN. |
 | 4 | View MAC addresses | Displays the contents of `mac_addresses.txt`. |
 | 5 | `change_dns.sh` | Sets DNS servers on all hosts. Choose Cloudflare/Google/Quad9 or enter custom DNS. Disables auto-DNS from DHCP. Uses NetworkManager. |
-| 6 | `fix_static_ip.sh` | Reads the current DHCP-assigned IP and converts it to a permanent static IP. Choose to keep current DNS, use Cloudflare/Google/Quad9, or enter custom DNS. Uses NetworkManager. |
+| 6 | `fix_static_ip.sh` | Computes static IP from gateway (first 3 octets) + hostname (last digits as 4th octet). Choose DNS: keep current, Cloudflare/Google/Quad9, or custom. Uses NetworkManager. |
 | 7 | `remove_vpn_reset_network.sh` | Removes all VPN packages (OpenVPN, WireGuard, etc.), deletes VPN connections, cleans config files, and sets the current IP as static. Full network reset. |
 | 8 | `require_sudo_network.sh` | Installs a polkit rule that requires a sudo password to change any network settings. Prevents users from modifying network configuration. |
 | 9 | `speedtest_all.sh` | Installs `speedtest-cli` if missing, then runs a speed test on every host. Saves results with timestamps to a file. |
@@ -486,6 +486,7 @@ After installation, `/remote_tools/` contains:
 
 | Version | Date | Changes |
 |---------|------|---------|
+| v.02.03.00 | 2026-02-25 | fix_static_ip.sh derives IP from gateway + hostname digits instead of keeping DHCP address. |
 | v.02.02.01 | 2026-02-25 | Custom DNS option in fix_static_ip.sh (keep current / Cloudflare+Google+Quad9 / custom) and change_dns.sh (Cloudflare+Google+Quad9 / custom). |
 | v.02.02.00 | 2026-02-24 | Standardized all 6 report files to consistent TSV format. All reports have header, tab-separated column headers, one row per host. Easy to copy-paste into spreadsheets. Added Used column to disk space, flattened services to one row per host, parsed speedtest into columns. |
 | v.02.01.01 | 2026-02-24 | Fixed: VPN removal script wiped DNS causing total network loss on all hosts. Fixed: static IP script now always sets DNS with fallback to 1.1.1.1/8.8.8.8/9.9.9.9. |

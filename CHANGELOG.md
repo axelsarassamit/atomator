@@ -1,5 +1,10 @@
 # The Automator - Changelog
 
+## v.02.03.00
+- fix_static_ip.sh now derives IP from gateway + hostname digits
+- IP = gateway first 3 octets + last digits of computer name (e.g. BKSAL058 = .58)
+- Subnet mask /24, validates hostname has trailing digits and octet <= 254
+
 ## v.02.02.01
 - Custom DNS option in fix_static_ip.sh (keep current / Cloudflare+Google+Quad9 / custom)
 - Custom DNS option in change_dns.sh (Cloudflare+Google+Quad9 / custom)
