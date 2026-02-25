@@ -148,6 +148,8 @@ Lines starting with `#` in `hosts.txt` are ignored (comments). Empty lines are s
 
 ## Menu Navigation
 
+![Main Menu](screenshots/menu_main.png)
+
 Start the menu:
 ```bash
 bash /root/start.sh
