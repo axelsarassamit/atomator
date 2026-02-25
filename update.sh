@@ -5,7 +5,7 @@ RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC
 TARGET_DIR="/remote_tools"
 GITHUB_URL="https://raw.githubusercontent.com/axelsarassamit/atomator/main/quick_install.sh"
 
-echo -e "${CYAN}=== The Automator - Update Scripts ===${NC}"
+echo -e "${CYAN}=== Atomator - Update Scripts ===${NC}"
 echo ""
 
 # Show current version
@@ -113,8 +113,13 @@ esac
 
 echo ""
 
-# Show changelog if available
-if [ -f "$TARGET_DIR/CHANGELOG.md" ]; then
+# Show changelog from the new version being installed
+NEW_CHANGELOG=$(sed -n "/cat > CHANGELOG.md << 'CLEOF'/,/^CLEOF$/{/cat > CHANGELOG.md/d;/^CLEOF$/d;p;}" "$UPDATE_FILE" 2>/dev/null)
+if [ -n "$NEW_CHANGELOG" ]; then
+    echo -e "${CYAN}Version changes (new version):${NC}"
+    echo "$NEW_CHANGELOG"
+    echo ""
+elif [ -f "$TARGET_DIR/CHANGELOG.md" ]; then
     echo -e "${CYAN}Version changes:${NC}"
     cat "$TARGET_DIR/CHANGELOG.md"
     echo ""

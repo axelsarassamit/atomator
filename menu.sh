@@ -19,7 +19,7 @@ log_action() {
 show_header() {
     clear
     echo -e "${CYAN}╔════════════════════════════════════════════════════════════════╗${NC}"
-    echo -e "${CYAN}║   The Automator  v.${VERSION}  -  Remote Xubuntu Management     ║${NC}"
+    echo -e "${CYAN}║   Atomator  v.${VERSION}  -  Remote Xubuntu Management           ║${NC}"
     echo -e "${CYAN}╚════════════════════════════════════════════════════════════════╝${NC}"
     echo ""
 }
@@ -96,8 +96,8 @@ menu_network() {
         echo -e "   ${YELLOW} 2.${NC} Wake-on-LAN                   (wake up all computers)"
         echo -e "   ${YELLOW} 3.${NC} Collect MAC addresses          (for WOL)"
         echo -e "   ${YELLOW} 4.${NC} View MAC addresses"
-        echo -e "   ${YELLOW} 5.${NC} Change DNS servers             (Cloudflare + Google + Quad9)"
-        echo -e "   ${YELLOW} 6.${NC} Fix static IP                  (set current IP as permanent)"
+        echo -e "   ${YELLOW} 5.${NC} Change DNS servers             (Cloudflare/Google/Quad9 or custom)"
+        echo -e "   ${YELLOW} 6.${NC} Fix static IP                  (gateway + hostname digits, choose DNS)"
         echo -e "   ${YELLOW} 7.${NC} Remove VPN + reset network     (clean VPN, set static IP)"
         echo -e "   ${YELLOW} 8.${NC} Lock network settings          (require sudo for changes)"
         echo -e "   ${YELLOW} 9.${NC} Speed test all hosts"
