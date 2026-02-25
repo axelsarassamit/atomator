@@ -486,6 +486,7 @@ After installation, `/remote_tools/` contains:
 
 | Version | Date | Changes |
 |---------|------|---------|
+| v.02.02.01 | 2026-02-25 | Custom DNS option in fix_static_ip.sh (keep current / Cloudflare+Google+Quad9 / custom) and change_dns.sh (Cloudflare+Google+Quad9 / custom). |
 | v.02.02.00 | 2026-02-24 | Standardized all 6 report files to consistent TSV format. All reports have header, tab-separated column headers, one row per host. Easy to copy-paste into spreadsheets. Added Used column to disk space, flattened services to one row per host, parsed speedtest into columns. |
 | v.02.01.01 | 2026-02-24 | Fixed: VPN removal script wiped DNS causing total network loss on all hosts. Fixed: static IP script now always sets DNS with fallback to 1.1.1.1/8.8.8.8/9.9.9.9. |
 | v.02.01.00 | 2026-02-24 | Renamed to "The Automator". New version format v.XX.YY.AA. Credentials system (`credentials.conf`) replaces hardcoded passwords. Password change script. Debug menu logging. Update catalog with version revert. Changelog display on updates. Wallpaper management script. Watchdog host configuration. View README from menu. Fixed: sudo command not found in update menu. |
