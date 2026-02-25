@@ -486,6 +486,7 @@ After installation, `/remote_tools/` contains:
 
 | Version | Date | Changes |
 |---------|------|---------|
+| v.02.03.02 | 2026-02-25 | Changelog reversed: oldest first, newest last. Latest changes now visible at bottom of update screen. |
 | v.02.03.01 | 2026-02-25 | Update screen now shows changelog from the new version being installed instead of the old one. |
 | v.02.03.00 | 2026-02-25 | fix_static_ip.sh derives IP from gateway + hostname digits instead of keeping DHCP address. |
 | v.02.02.01 | 2026-02-25 | Custom DNS option in fix_static_ip.sh (keep current / Cloudflare+Google+Quad9 / custom) and change_dns.sh (Cloudflare+Google+Quad9 / custom). |
