@@ -1746,6 +1746,7 @@ cat > CHANGELOG.md << 'CLEOF'
 ## v.02.02.01
 - Custom DNS option in fix_static_ip.sh (keep current / Cloudflare+Google+Quad9 / custom)
 - Custom DNS option in change_dns.sh (Cloudflare+Google+Quad9 / custom)
+- Updated menu text and README descriptions to reflect custom DNS options
 
 ## v.02.02.00
 - Standardized all 6 report files to consistent TSV (tab-separated) format
@@ -1951,8 +1952,8 @@ menu_network() {
         echo -e "   ${YELLOW} 2.${NC} Wake-on-LAN                   (wake up all computers)"
         echo -e "   ${YELLOW} 3.${NC} Collect MAC addresses          (for WOL)"
         echo -e "   ${YELLOW} 4.${NC} View MAC addresses"
-        echo -e "   ${YELLOW} 5.${NC} Change DNS servers             (Cloudflare + Google + Quad9)"
-        echo -e "   ${YELLOW} 6.${NC} Fix static IP                  (set current IP as permanent)"
+        echo -e "   ${YELLOW} 5.${NC} Change DNS servers             (Cloudflare/Google/Quad9 or custom)"
+        echo -e "   ${YELLOW} 6.${NC} Fix static IP                  (set current IP as permanent, choose DNS)"
         echo -e "   ${YELLOW} 7.${NC} Remove VPN + reset network     (clean VPN, set static IP)"
         echo -e "   ${YELLOW} 8.${NC} Lock network settings          (require sudo for changes)"
         echo -e "   ${YELLOW} 9.${NC} Speed test all hosts"
