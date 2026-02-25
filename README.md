@@ -198,7 +198,7 @@ All menu navigation is logged to `debug.log` for troubleshooting.
 
 | # | Script | Description |
 |---|--------|-------------|
-| 1 | `check_hosts.sh` | Pings every host and shows ONLINE (green) or OFFLINE (red). Shows totals at the end. Does not require SSH. |
+| 1 | `check_hosts.sh` | Pings every host and shows ONLINE (green) or OFFLINE (red) with hostname. Shows totals at the end. |
 | 2 | `wol_all.sh` | Sends Wake-on-LAN magic packets to wake up powered-off computers. Reads MAC addresses from `mac_addresses.txt`. Sends 3 packets per host. Run `collect_mac_addresses.sh` first. |
 | 3 | `collect_mac_addresses.sh` | Connects to each host, reads the MAC address of the primary ethernet interface, and saves it to `mac_addresses.txt`. Required before using Wake-on-LAN. |
 | 4 | View MAC addresses | Displays the contents of `mac_addresses.txt`. |
@@ -486,6 +486,7 @@ After installation, `/remote_tools/` contains:
 
 | Version | Date | Changes |
 |---------|------|---------|
+| v.02.03.03 | 2026-02-25 | check_hosts.sh now shows hostname for online hosts via SSH. |
 | v.02.03.02 | 2026-02-25 | Changelog reversed: oldest first, newest last. Latest changes now visible at bottom of update screen. |
 | v.02.03.01 | 2026-02-25 | Update screen now shows changelog from the new version being installed instead of the old one. |
 | v.02.03.00 | 2026-02-25 | fix_static_ip.sh derives IP from gateway + hostname digits instead of keeping DHCP address. |

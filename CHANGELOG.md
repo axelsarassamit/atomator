@@ -52,3 +52,6 @@
 
 ## v.02.03.02
 - Changelog now shows oldest first, newest last (latest changes visible at bottom)
+
+## v.02.03.03
+- check_hosts.sh now shows hostname for online hosts via SSH
