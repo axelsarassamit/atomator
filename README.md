@@ -528,6 +528,7 @@ After installation, `/remote_tools/` contains:
 
 | Version | Date | Changes |
 |---------|------|---------|
+| v.02.06.01 | 2026-02-27 | Improved fix_slow_sudo.sh: fixes 127.0.1.1 line, nsswitch.conf order, verifies hostname resolution. |
 | v.02.06.00 | 2026-02-27 | Added removal for Simplenote and Redshift. Added install/remove for Google Chrome, Chromium, and Xpad. Software menu now has 16 options. |
 | v.02.05.01 | 2026-02-27 | Added fix_hostname_display.sh - repairs conky hostname display when not showing. |
 | v.02.05.00 | 2026-02-27 | Added fix_slow_sudo.sh to Tools menu - fixes slow sudo by adding hostname to /etc/hosts on all hosts. |

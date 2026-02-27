@@ -73,3 +73,6 @@
 - Added remove_simplenote.sh and remove_redshift.sh
 - Added install/remove for Google Chrome, Chromium, and Xpad (sticky notes)
 - Software menu expanded to 16 options
+
+## v.02.06.01
+- Improved fix_slow_sudo.sh: fixes 127.0.1.1 line, nsswitch.conf order, verifies hostname resolution
