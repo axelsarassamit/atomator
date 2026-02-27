@@ -55,3 +55,7 @@
 
 ## v.02.03.03
 - check_hosts.sh now shows hostname for online hosts via SSH
+
+## v.02.04.00
+- Added install_simplenote.sh (snap-based note-taking app)
+- Added install_redshift.sh (screen color temperature with autostart)

@@ -246,6 +246,8 @@ Each data collection script saves results to a timestamped file. Use the "View l
 | 3 | `install_hostname_display.sh` | Installs Conky and creates a configuration that displays the computer's hostname in the bottom-right corner of the desktop. Auto-starts on login. Useful for identifying which computer you're looking at. |
 | 4 | `install_wine.sh` | Installs Wine (32-bit and 64-bit) and Winetricks for running Windows .exe files. |
 | 5 | `remove_wine.sh` | Removes Wine packages and deletes all `~/.wine` directories. |
+| 6 | `install_simplenote.sh` | Installs Simplenote note-taking app via snap on all hosts. |
+| 7 | `install_redshift.sh` | Installs Redshift and redshift-gtk for automatic screen color temperature adjustment. Creates autostart entry for all users. |
 
 ### 5. Configuration
 
@@ -482,6 +484,8 @@ After installation, `/remote_tools/` contains:
   install_hostname_display.sh      # Install hostname display
   install_wine.sh                  # Install Wine
   remove_wine.sh                   # Remove Wine
+  install_simplenote.sh            # Install Simplenote
+  install_redshift.sh              # Install Redshift
   set_wallpaper.sh                 # Set wallpaper
   manage_wallpapers.sh             # Manage wallpaper URLs
   restrict_chromium_cpu.sh         # Restrict Chromium CPU
@@ -504,6 +508,7 @@ After installation, `/remote_tools/` contains:
 
 | Version | Date | Changes |
 |---------|------|---------|
+| v.02.04.00 | 2026-02-27 | Added install_simplenote.sh and install_redshift.sh to Software menu. |
 | v.02.03.03 | 2026-02-25 | check_hosts.sh now shows hostname for online hosts via SSH. |
 | v.02.03.02 | 2026-02-25 | Changelog reversed: oldest first, newest last. Latest changes now visible at bottom of update screen. |
 | v.02.03.01 | 2026-02-25 | Update screen now shows changelog from the new version being installed instead of the old one. |
