@@ -102,3 +102,6 @@
 ## v.02.07.03
 - Fixed black background: enables Xfce compositor for true ARGB transparency
 - Conky now uses own_window_argb_visual with compositor instead of pseudo-transparency
+
+## v.02.07.04
+- Fix hostname display: proper restart without reboot - removes autostart first, force kills all conky, verifies dead, then starts fresh

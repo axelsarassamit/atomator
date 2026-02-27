@@ -528,6 +528,7 @@ After installation, `/remote_tools/` contains:
 
 | Version | Date | Changes |
 |---------|------|---------|
+| v.02.07.04 | 2026-02-27 | Fix hostname display: proper restart without reboot - kills old conky cleanly then starts fresh. |
 | v.02.07.03 | 2026-02-27 | Fixed black background: enables Xfce compositor for true ARGB transparency on hostname display. |
 | v.02.07.02 | 2026-02-27 | Hostname display: black outline on white text, positioned closer to taskbar. |
 | v.02.07.01 | 2026-02-27 | Fixed duplicate hostname display and black background. Cleans up all old conky configs, uses pseudo-transparency. |
