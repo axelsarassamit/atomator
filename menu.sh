@@ -60,12 +60,15 @@ menu_updates() {
         echo ""
         echo -e "${MAGENTA}  SYSTEM UPDATES & MAINTENANCE${NC}"
         echo ""
+        echo -e "   ${CYAN}--- UPDATES ---${NC}"
         echo -e "   ${YELLOW}1.${NC} Update all systems            (apt update + upgrade)"
         echo -e "   ${YELLOW}2.${NC} Update + remove old kernels   (frees disk space)"
         echo -e "   ${YELLOW}3.${NC} Disable automatic updates     (stops unattended-upgrades)"
+        echo ""
+        echo -e "   ${CYAN}--- MAINTENANCE ---${NC}"
         echo -e "   ${YELLOW}4.${NC} System cleanup                (cache, logs, trash)"
-        echo -e "   ${YELLOW}5.${NC} Reboot all hosts"
-        echo -e "   ${YELLOW}6.${NC} Shutdown all hosts"
+        echo -e "   ${YELLOW}5.${NC} Reboot all hosts              (restart all remote machines)"
+        echo -e "   ${YELLOW}6.${NC} Shutdown all hosts            (power off all remote machines)"
         echo ""
         echo -e "   ${RED}0.${NC} Back"
         echo ""
@@ -92,17 +95,22 @@ menu_network() {
         echo ""
         echo -e "${MAGENTA}  NETWORK${NC}"
         echo ""
+        echo -e "   ${CYAN}--- STATUS & WAKE ---${NC}"
         echo -e "   ${YELLOW} 1.${NC} Check host status             (ping all hosts)"
         echo -e "   ${YELLOW} 2.${NC} Wake-on-LAN                   (wake up all computers)"
-        echo -e "   ${YELLOW} 3.${NC} Collect MAC addresses          (for WOL)"
-        echo -e "   ${YELLOW} 4.${NC} View MAC addresses"
+        echo -e "   ${YELLOW} 3.${NC} Collect MAC addresses          (gather addresses for WOL)"
+        echo -e "   ${YELLOW} 4.${NC} View MAC addresses             (show collected addresses)"
+        echo ""
+        echo -e "   ${CYAN}--- DNS & IP ---${NC}"
         echo -e "   ${YELLOW} 5.${NC} Change DNS servers             (Cloudflare/Google/Quad9 or custom)"
         echo -e "   ${YELLOW} 6.${NC} Fix static IP                  (gateway + hostname digits, choose DNS)"
-        echo -e "   ${YELLOW} 7.${NC} Remove VPN + reset network     (clean VPN, set static IP)"
-        echo -e "   ${YELLOW} 8.${NC} Lock network settings          (require sudo for changes)"
-        echo -e "   ${YELLOW} 9.${NC} Speed test all hosts"
-        echo -e "   ${YELLOW}10.${NC} View latest speed test"
-        echo -e "   ${YELLOW}11.${NC} Disable WiFi                   (permanent, all hosts)"
+        echo -e "   ${YELLOW} 7.${NC} Disable WiFi                   (permanent, all hosts)"
+        echo ""
+        echo -e "   ${CYAN}--- SECURITY & TESTING ---${NC}"
+        echo -e "   ${YELLOW} 8.${NC} Remove VPN + reset network     (clean VPN, set static IP)"
+        echo -e "   ${YELLOW} 9.${NC} Lock network settings          (require sudo for changes)"
+        echo -e "   ${YELLOW}10.${NC} Speed test all hosts           (run speedtest-cli on each host)"
+        echo -e "   ${YELLOW}11.${NC} View latest speed test         (show most recent results)"
         echo ""
         echo -e "   ${RED} 0.${NC} Back"
         echo ""
@@ -119,11 +127,11 @@ menu_network() {
                 pause ;;
             5)  run_script "change_dns.sh" "Change DNS Servers" ;;
             6)  run_script "fix_static_ip.sh" "Fix Static IP" ;;
-            7)  run_script "remove_vpn_reset_network.sh" "Remove VPN + Reset Network" ;;
-            8)  run_script "require_sudo_network.sh" "Lock Network Settings" ;;
-            9)  run_script "speedtest_all.sh" "Speed Test All Hosts" ;;
-            10) view_latest "speedtest_results_*.txt" ;;
-            11) run_script "disable_wifi.sh" "Disable WiFi" ;;
+            7)  run_script "disable_wifi.sh" "Disable WiFi" ;;
+            8)  run_script "remove_vpn_reset_network.sh" "Remove VPN + Reset Network" ;;
+            9)  run_script "require_sudo_network.sh" "Lock Network Settings" ;;
+            10) run_script "speedtest_all.sh" "Speed Test All Hosts" ;;
+            11) view_latest "speedtest_results_*.txt" ;;
             0)  break ;;
             *)  echo -e "${RED}Invalid.${NC}"; sleep 1 ;;
         esac
@@ -138,16 +146,25 @@ menu_info() {
         echo ""
         echo -e "${MAGENTA}  INFORMATION & REPORTS${NC}"
         echo ""
+        echo -e "   ${CYAN}--- HARDWARE ---${NC}"
         echo -e "   ${YELLOW} 1.${NC} Collect hardware info          (CPU, RAM, disk, model)"
-        echo -e "   ${YELLOW} 2.${NC} View latest hardware report"
+        echo -e "   ${YELLOW} 2.${NC} View latest hardware report    (show most recent report)"
+        echo ""
+        echo -e "   ${CYAN}--- MEMORY ---${NC}"
         echo -e "   ${YELLOW} 3.${NC} Collect RAM info               (detailed memory report)"
-        echo -e "   ${YELLOW} 4.${NC} View latest RAM report"
+        echo -e "   ${YELLOW} 4.${NC} View latest RAM report         (show most recent report)"
+        echo ""
+        echo -e "   ${CYAN}--- DISK ---${NC}"
         echo -e "   ${YELLOW} 5.${NC} Check disk space               (warns if disk is full)"
-        echo -e "   ${YELLOW} 6.${NC} View latest disk report"
+        echo -e "   ${YELLOW} 6.${NC} View latest disk report        (show most recent report)"
+        echo ""
+        echo -e "   ${CYAN}--- UPTIME ---${NC}"
         echo -e "   ${YELLOW} 7.${NC} Check uptime                   (how long each host is running)"
-        echo -e "   ${YELLOW} 8.${NC} View latest uptime report"
+        echo -e "   ${YELLOW} 8.${NC} View latest uptime report      (show most recent report)"
+        echo ""
+        echo -e "   ${CYAN}--- SERVICES ---${NC}"
         echo -e "   ${YELLOW} 9.${NC} Check services                 (SSH, NetworkManager, cron)"
-        echo -e "   ${YELLOW}10.${NC} View latest services report"
+        echo -e "   ${YELLOW}10.${NC} View latest services report    (show most recent report)"
         echo ""
         echo -e "   ${RED} 0.${NC} Back"
         echo ""
@@ -175,22 +192,27 @@ menu_software() {
         show_header
         echo -e "${MAGENTA}  SOFTWARE${NC}"
         echo ""
-        echo -e "   ${YELLOW} 1.${NC} Install Firefox"
-        echo -e "   ${YELLOW} 2.${NC} Uninstall Firefox"
-        echo -e "   ${YELLOW} 3.${NC} Install hostname display       (conky on desktop)"
-        echo -e "   ${YELLOW} 4.${NC} Fix hostname display           (repair/restart conky)"
-        echo -e "   ${YELLOW} 5.${NC} Install Wine                   (run Windows .exe files)"
-        echo -e "   ${YELLOW} 6.${NC} Remove Wine"
-        echo -e "   ${YELLOW} 7.${NC} Install Simplenote              (note-taking app)"
-        echo -e "   ${YELLOW} 8.${NC} Remove Simplenote"
-        echo -e "   ${YELLOW} 9.${NC} Install Redshift                (screen color temperature)"
-        echo -e "   ${YELLOW}10.${NC} Remove Redshift"
-        echo -e "   ${YELLOW}11.${NC} Install Google Chrome"
-        echo -e "   ${YELLOW}12.${NC} Remove Google Chrome"
-        echo -e "   ${YELLOW}13.${NC} Install Chromium"
-        echo -e "   ${YELLOW}14.${NC} Remove Chromium"
-        echo -e "   ${YELLOW}15.${NC} Install Xpad                    (sticky notes)"
-        echo -e "   ${YELLOW}16.${NC} Remove Xpad"
+        echo -e "   ${CYAN}--- INSTALL ---${NC}"
+        echo -e "   ${YELLOW} 1.${NC} Install Firefox                (default ESR browser)"
+        echo -e "   ${YELLOW} 2.${NC} Install Google Chrome          (Google's official browser)"
+        echo -e "   ${YELLOW} 3.${NC} Install Chromium               (open-source Chrome alternative)"
+        echo -e "   ${YELLOW} 4.${NC} Install Wine                   (run Windows .exe files)"
+        echo -e "   ${YELLOW} 5.${NC} Install Simplenote             (note-taking app)"
+        echo -e "   ${YELLOW} 6.${NC} Install Redshift               (screen color temperature)"
+        echo -e "   ${YELLOW} 7.${NC} Install Xpad                   (sticky notes on desktop)"
+        echo -e "   ${YELLOW} 8.${NC} Install hostname display       (conky overlay on desktop)"
+        echo ""
+        echo -e "   ${CYAN}--- REMOVE ---${NC}"
+        echo -e "   ${YELLOW} 9.${NC} Remove Firefox                 (uninstall browser)"
+        echo -e "   ${YELLOW}10.${NC} Remove Google Chrome           (uninstall browser + repo)"
+        echo -e "   ${YELLOW}11.${NC} Remove Chromium                (uninstall browser)"
+        echo -e "   ${YELLOW}12.${NC} Remove Wine                    (uninstall Windows layer)"
+        echo -e "   ${YELLOW}13.${NC} Remove Simplenote              (uninstall note-taking app)"
+        echo -e "   ${YELLOW}14.${NC} Remove Redshift                (uninstall color filter)"
+        echo -e "   ${YELLOW}15.${NC} Remove Xpad                    (uninstall sticky notes)"
+        echo ""
+        echo -e "   ${CYAN}--- FIX ---${NC}"
+        echo -e "   ${YELLOW}16.${NC} Fix hostname display           (repair/restart conky)"
         echo ""
         echo -e "   ${RED} 0.${NC} Back"
         echo ""
@@ -198,21 +220,21 @@ menu_software() {
         log_action "SUBMENU software: choice=$c"
         case $c in
             1)  run_script "install_firefox.sh" "Install Firefox" ;;
-            2)  run_script "uninstall_firefox.sh" "Uninstall Firefox" ;;
-            3)  run_script "install_hostname_display.sh" "Install Hostname Display" ;;
-            4)  run_script "fix_hostname_display.sh" "Fix Hostname Display" ;;
-            5)  run_script "install_wine.sh" "Install Wine" ;;
-            6)  run_script "remove_wine.sh" "Remove Wine" ;;
-            7)  run_script "install_simplenote.sh" "Install Simplenote" ;;
-            8)  run_script "remove_simplenote.sh" "Remove Simplenote" ;;
-            9)  run_script "install_redshift.sh" "Install Redshift" ;;
-            10) run_script "remove_redshift.sh" "Remove Redshift" ;;
-            11) run_script "install_chrome.sh" "Install Google Chrome" ;;
-            12) run_script "remove_chrome.sh" "Remove Google Chrome" ;;
-            13) run_script "install_chromium.sh" "Install Chromium" ;;
-            14) run_script "remove_chromium.sh" "Remove Chromium" ;;
-            15) run_script "install_xpad.sh" "Install Xpad" ;;
-            16) run_script "remove_xpad.sh" "Remove Xpad" ;;
+            2)  run_script "install_chrome.sh" "Install Google Chrome" ;;
+            3)  run_script "install_chromium.sh" "Install Chromium" ;;
+            4)  run_script "install_wine.sh" "Install Wine" ;;
+            5)  run_script "install_simplenote.sh" "Install Simplenote" ;;
+            6)  run_script "install_redshift.sh" "Install Redshift" ;;
+            7)  run_script "install_xpad.sh" "Install Xpad" ;;
+            8)  run_script "install_hostname_display.sh" "Install Hostname Display" ;;
+            9)  run_script "uninstall_firefox.sh" "Uninstall Firefox" ;;
+            10) run_script "remove_chrome.sh" "Remove Google Chrome" ;;
+            11) run_script "remove_chromium.sh" "Remove Chromium" ;;
+            12) run_script "remove_wine.sh" "Remove Wine" ;;
+            13) run_script "remove_simplenote.sh" "Remove Simplenote" ;;
+            14) run_script "remove_redshift.sh" "Remove Redshift" ;;
+            15) run_script "remove_xpad.sh" "Remove Xpad" ;;
+            16) run_script "fix_hostname_display.sh" "Fix Hostname Display" ;;
             0)  break ;;
             *) echo -e "${RED}Invalid.${NC}"; sleep 1 ;;
         esac
@@ -247,10 +269,13 @@ menu_tools() {
         show_header
         echo -e "${MAGENTA}  TOOLS${NC}"
         echo ""
+        echo -e "   ${CYAN}--- REMOTE ---${NC}"
         echo -e "   ${YELLOW}1.${NC} Run custom command             (execute anything on all hosts)"
-        echo -e "   ${YELLOW}2.${NC} Delete SSH keys (local)        (clean keys on this server)"
-        echo -e "   ${YELLOW}3.${NC} Change remote password         (change SSH user password)"
-        echo -e "   ${YELLOW}4.${NC} Fix slow sudo                 (add hostname to /etc/hosts)"
+        echo -e "   ${YELLOW}2.${NC} Change remote password         (change SSH user password)"
+        echo ""
+        echo -e "   ${CYAN}--- FIX ---${NC}"
+        echo -e "   ${YELLOW}3.${NC} Delete SSH keys                (clean keys on this server)"
+        echo -e "   ${YELLOW}4.${NC} Fix slow sudo                  (add hostname to /etc/hosts)"
         echo ""
         echo -e "   ${RED}0.${NC} Back"
         echo ""
@@ -258,8 +283,8 @@ menu_tools() {
         log_action "SUBMENU tools: choice=$c"
         case $c in
             1) run_script "run_remote_command.sh" "Run Custom Command" ;;
-            2) run_script "delete_ssh_keys.sh" "Delete SSH Keys (Local)" ;;
-            3) run_script "change_password.sh" "Change Remote Password" ;;
+            2) run_script "change_password.sh" "Change Remote Password" ;;
+            3) run_script "delete_ssh_keys.sh" "Delete SSH Keys" ;;
             4) run_script "fix_slow_sudo.sh" "Fix Slow Sudo" ;;
             0) break ;;
             *) echo -e "${RED}Invalid.${NC}"; sleep 1 ;;
@@ -273,9 +298,9 @@ menu_files() {
         echo -e "${MAGENTA}  FILE MANAGEMENT${NC}"
         echo ""
         echo -e "   ${YELLOW}1.${NC} Manage hosts.txt               (add, remove, fill ranges)"
-        echo -e "   ${YELLOW}2.${NC} View hosts.txt"
-        echo -e "   ${YELLOW}3.${NC} Edit hosts.txt"
-        echo -e "   ${YELLOW}4.${NC} View README"
+        echo -e "   ${YELLOW}2.${NC} View hosts.txt                 (display current host list)"
+        echo -e "   ${YELLOW}3.${NC} Edit hosts.txt                 (open in text editor)"
+        echo -e "   ${YELLOW}4.${NC} View README                    (show project documentation)"
         echo ""
         echo -e "   ${RED}0.${NC} Back"
         echo ""

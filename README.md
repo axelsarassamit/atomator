@@ -528,6 +528,7 @@ After installation, `/remote_tools/` contains:
 
 | Version | Date | Changes |
 |---------|------|---------|
+| v.02.07.00 | 2026-02-27 | Redesigned all menus with section dividers, spacing, and descriptions for every item. |
 | v.02.06.02 | 2026-02-27 | Fixed fix_hostname_display.sh hanging: conky now fully detached with nohup so SSH doesn't get stuck. |
 | v.02.06.01 | 2026-02-27 | Improved fix_slow_sudo.sh: fixes 127.0.1.1 line, nsswitch.conf order, verifies hostname resolution. |
 | v.02.06.00 | 2026-02-27 | Added removal for Simplenote and Redshift. Added install/remove for Google Chrome, Chromium, and Xpad. Software menu now has 16 options. |

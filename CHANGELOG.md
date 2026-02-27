@@ -79,3 +79,12 @@
 
 ## v.02.06.02
 - Fixed fix_hostname_display.sh hanging: conky now fully detached with nohup so SSH session doesn't get stuck
+
+## v.02.07.00
+- Redesigned all menus with section dividers and spacing for better readability
+- Software menu grouped into Install, Remove, and Fix sections
+- Network menu grouped into Status & Wake, DNS & IP, and Security & Testing
+- Information menu grouped by category (Hardware, Memory, Disk, Uptime, Services)
+- Updates menu split into Updates and Maintenance sections
+- Tools menu split into Remote and Fix sections
+- Added descriptions to all menu items that were missing them
