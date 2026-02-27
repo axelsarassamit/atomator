@@ -9,10 +9,19 @@ REMOTE_SCRIPT="/tmp/_install_hostname_display.sh"
 cat > "$LOCAL_SCRIPT" << 'SCRIPT'
 #!/bin/bash
 DEBIAN_FRONTEND=noninteractive apt-get install -y conky-all
+# Kill any existing conky
+pkill -f "conky" 2>/dev/null || true
+sleep 1
 HOSTNAME_LABEL=$(hostname)
 for user_home in /home/*; do
     user=$(basename "$user_home")
     id "$user" &>/dev/null || continue
+    # Remove ALL old conky configs and autostart files
+    rm -f "$user_home/.config/conky_hostname.conf" 2>/dev/null
+    rm -f "$user_home/.conkyrc" 2>/dev/null
+    rm -f "$user_home/.config/conky/"*.conf 2>/dev/null
+    rm -f "$user_home/.config/autostart/conky"*.desktop 2>/dev/null
+    # Create clean config (pseudo-transparency, no black background)
     mkdir -p "$user_home/.config"
     cat > "$user_home/.config/conky_hostname.conf" << CONKYCONF
 conky.config = {
@@ -21,15 +30,12 @@ conky.config = {
     double_buffer = true,
     font = 'DejaVu Sans:bold:size=14',
     gap_x = 20,
-    gap_y = 20,
+    gap_y = 40,
     own_window = true,
     own_window_type = 'desktop',
     own_window_transparent = true,
     own_window_hints = 'undecorated,below,sticky,skip_taskbar,skip_pager',
-    own_window_argb_visual = true,
-    own_window_argb_value = 0,
-    draw_shads = true,
-    default_shade_color = '000000',
+    draw_shads = false,
     update_interval = 60,
     use_xft = true,
 };
@@ -38,6 +44,7 @@ conky.text = [[
 ]];
 CONKYCONF
     chown "$user:$user" "$user_home/.config/conky_hostname.conf"
+    # Create single autostart entry
     mkdir -p "$user_home/.config/autostart"
     cat > "$user_home/.config/autostart/conky-hostname.desktop" << DESKTOP
 [Desktop Entry]

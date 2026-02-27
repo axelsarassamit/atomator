@@ -88,3 +88,9 @@
 - Updates menu split into Updates and Maintenance sections
 - Tools menu split into Remote and Fix sections
 - Added descriptions to all menu items that were missing them
+
+## v.02.07.01
+- Fixed duplicate hostname display: now removes ALL old conky configs and autostart files before recreating
+- Fixed black background: removed ARGB transparency (fails without compositor), uses pseudo-transparency instead
+- Removed text shadow that caused dark appearance
+- Both install and fix scripts updated with same clean config
