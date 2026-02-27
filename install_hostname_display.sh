@@ -21,7 +21,17 @@ for user_home in /home/*; do
     rm -f "$user_home/.conkyrc" 2>/dev/null
     rm -f "$user_home/.config/conky/"*.conf 2>/dev/null
     rm -f "$user_home/.config/autostart/conky"*.desktop 2>/dev/null
-    # Create clean config (pseudo-transparency, no black background)
+    # Enable Xfce compositor (required for true transparency)
+    if who | grep -q "^$user "; then
+        su - "$user" -c "DISPLAY=:0 xfconf-query -c xfwm4 -p /general/use_compositing -s true" 2>/dev/null || true
+    fi
+    # Also set it in xfce config file for next login
+    mkdir -p "$user_home/.config/xfce4/xfconf/xfce-perchannel-xml"
+    if [ -f "$user_home/.config/xfce4/xfconf/xfce-perchannel-xml/xfwm4.xml" ]; then
+        sed -i 's|name="use_compositing" type="bool" value="false"|name="use_compositing" type="bool" value="true"|g' \
+            "$user_home/.config/xfce4/xfconf/xfce-perchannel-xml/xfwm4.xml" 2>/dev/null || true
+    fi
+    # Create config with ARGB transparency (works with compositor)
     mkdir -p "$user_home/.config"
     cat > "$user_home/.config/conky_hostname.conf" << CONKYCONF
 conky.config = {
@@ -33,8 +43,10 @@ conky.config = {
     gap_y = 26,
     own_window = true,
     own_window_type = 'desktop',
-    own_window_transparent = true,
+    own_window_transparent = false,
     own_window_hints = 'undecorated,below,sticky,skip_taskbar,skip_pager',
+    own_window_argb_visual = true,
+    own_window_argb_value = 0,
     draw_shads = true,
     default_shade_color = '000000',
     draw_outline = true,

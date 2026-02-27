@@ -98,3 +98,7 @@
 ## v.02.07.02
 - Hostname display: added black outline on white text for better readability
 - Moved closer to taskbar (gap_y 26) to match desired position
+
+## v.02.07.03
+- Fixed black background: enables Xfce compositor for true ARGB transparency
+- Conky now uses own_window_argb_visual with compositor instead of pseudo-transparency
