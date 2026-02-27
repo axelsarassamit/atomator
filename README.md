@@ -248,7 +248,15 @@ Each data collection script saves results to a timestamped file. Use the "View l
 | 5 | `install_wine.sh` | Installs Wine (32-bit and 64-bit) and Winetricks for running Windows .exe files. |
 | 6 | `remove_wine.sh` | Removes Wine packages and deletes all `~/.wine` directories. |
 | 7 | `install_simplenote.sh` | Installs Simplenote note-taking app via snap on all hosts. |
-| 8 | `install_redshift.sh` | Installs Redshift and redshift-gtk for automatic screen color temperature adjustment. Creates autostart entry for all users. |
+| 8 | `remove_simplenote.sh` | Removes Simplenote from all hosts. |
+| 9 | `install_redshift.sh` | Installs Redshift and redshift-gtk for automatic screen color temperature adjustment. Creates autostart entry for all users. |
+| 10 | `remove_redshift.sh` | Removes Redshift and its autostart entries from all hosts. |
+| 11 | `install_chrome.sh` | Downloads and installs Google Chrome from Google's repository on all hosts. |
+| 12 | `remove_chrome.sh` | Removes Google Chrome from all hosts. |
+| 13 | `install_chromium.sh` | Installs Chromium browser from apt repositories on all hosts. |
+| 14 | `remove_chromium.sh` | Removes Chromium browser from all hosts. |
+| 15 | `install_xpad.sh` | Installs Xpad sticky notes application on all hosts. |
+| 16 | `remove_xpad.sh` | Removes Xpad from all hosts. |
 
 ### 5. Configuration
 
@@ -488,7 +496,15 @@ After installation, `/remote_tools/` contains:
   install_wine.sh                  # Install Wine
   remove_wine.sh                   # Remove Wine
   install_simplenote.sh            # Install Simplenote
+  remove_simplenote.sh             # Remove Simplenote
   install_redshift.sh              # Install Redshift
+  remove_redshift.sh               # Remove Redshift
+  install_chrome.sh                # Install Google Chrome
+  remove_chrome.sh                 # Remove Google Chrome
+  install_chromium.sh              # Install Chromium
+  remove_chromium.sh               # Remove Chromium
+  install_xpad.sh                  # Install Xpad (sticky notes)
+  remove_xpad.sh                   # Remove Xpad
   set_wallpaper.sh                 # Set wallpaper
   manage_wallpapers.sh             # Manage wallpaper URLs
   restrict_chromium_cpu.sh         # Restrict Chromium CPU
@@ -512,6 +528,7 @@ After installation, `/remote_tools/` contains:
 
 | Version | Date | Changes |
 |---------|------|---------|
+| v.02.06.00 | 2026-02-27 | Added removal for Simplenote and Redshift. Added install/remove for Google Chrome, Chromium, and Xpad. Software menu now has 16 options. |
 | v.02.05.01 | 2026-02-27 | Added fix_hostname_display.sh - repairs conky hostname display when not showing. |
 | v.02.05.00 | 2026-02-27 | Added fix_slow_sudo.sh to Tools menu - fixes slow sudo by adding hostname to /etc/hosts on all hosts. |
 | v.02.04.01 | 2026-02-27 | Fixed GitHub update: use API endpoint instead of raw CDN to avoid cache delay. |

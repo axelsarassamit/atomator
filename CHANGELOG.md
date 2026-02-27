@@ -68,3 +68,8 @@
 
 ## v.02.05.01
 - Added fix_hostname_display.sh - repairs conky hostname display (kills stuck processes, recreates config, restarts immediately)
+
+## v.02.06.00
+- Added remove_simplenote.sh and remove_redshift.sh
+- Added install/remove for Google Chrome, Chromium, and Xpad (sticky notes)
+- Software menu expanded to 16 options

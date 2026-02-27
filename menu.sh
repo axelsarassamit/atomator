@@ -175,29 +175,45 @@ menu_software() {
         show_header
         echo -e "${MAGENTA}  SOFTWARE${NC}"
         echo ""
-        echo -e "   ${YELLOW}1.${NC} Install Firefox"
-        echo -e "   ${YELLOW}2.${NC} Uninstall Firefox"
-        echo -e "   ${YELLOW}3.${NC} Install hostname display       (conky on desktop)"
-        echo -e "   ${YELLOW}4.${NC} Fix hostname display           (repair/restart conky)"
-        echo -e "   ${YELLOW}5.${NC} Install Wine                   (run Windows .exe files)"
-        echo -e "   ${YELLOW}6.${NC} Remove Wine"
-        echo -e "   ${YELLOW}7.${NC} Install Simplenote              (note-taking app)"
-        echo -e "   ${YELLOW}8.${NC} Install Redshift                (screen color temperature)"
+        echo -e "   ${YELLOW} 1.${NC} Install Firefox"
+        echo -e "   ${YELLOW} 2.${NC} Uninstall Firefox"
+        echo -e "   ${YELLOW} 3.${NC} Install hostname display       (conky on desktop)"
+        echo -e "   ${YELLOW} 4.${NC} Fix hostname display           (repair/restart conky)"
+        echo -e "   ${YELLOW} 5.${NC} Install Wine                   (run Windows .exe files)"
+        echo -e "   ${YELLOW} 6.${NC} Remove Wine"
+        echo -e "   ${YELLOW} 7.${NC} Install Simplenote              (note-taking app)"
+        echo -e "   ${YELLOW} 8.${NC} Remove Simplenote"
+        echo -e "   ${YELLOW} 9.${NC} Install Redshift                (screen color temperature)"
+        echo -e "   ${YELLOW}10.${NC} Remove Redshift"
+        echo -e "   ${YELLOW}11.${NC} Install Google Chrome"
+        echo -e "   ${YELLOW}12.${NC} Remove Google Chrome"
+        echo -e "   ${YELLOW}13.${NC} Install Chromium"
+        echo -e "   ${YELLOW}14.${NC} Remove Chromium"
+        echo -e "   ${YELLOW}15.${NC} Install Xpad                    (sticky notes)"
+        echo -e "   ${YELLOW}16.${NC} Remove Xpad"
         echo ""
-        echo -e "   ${RED}0.${NC} Back"
+        echo -e "   ${RED} 0.${NC} Back"
         echo ""
-        read -p "  Choice [0-8]: " c
+        read -p "  Choice [0-16]: " c
         log_action "SUBMENU software: choice=$c"
         case $c in
-            1) run_script "install_firefox.sh" "Install Firefox" ;;
-            2) run_script "uninstall_firefox.sh" "Uninstall Firefox" ;;
-            3) run_script "install_hostname_display.sh" "Install Hostname Display" ;;
-            4) run_script "fix_hostname_display.sh" "Fix Hostname Display" ;;
-            5) run_script "install_wine.sh" "Install Wine" ;;
-            6) run_script "remove_wine.sh" "Remove Wine" ;;
-            7) run_script "install_simplenote.sh" "Install Simplenote" ;;
-            8) run_script "install_redshift.sh" "Install Redshift" ;;
-            0) break ;;
+            1)  run_script "install_firefox.sh" "Install Firefox" ;;
+            2)  run_script "uninstall_firefox.sh" "Uninstall Firefox" ;;
+            3)  run_script "install_hostname_display.sh" "Install Hostname Display" ;;
+            4)  run_script "fix_hostname_display.sh" "Fix Hostname Display" ;;
+            5)  run_script "install_wine.sh" "Install Wine" ;;
+            6)  run_script "remove_wine.sh" "Remove Wine" ;;
+            7)  run_script "install_simplenote.sh" "Install Simplenote" ;;
+            8)  run_script "remove_simplenote.sh" "Remove Simplenote" ;;
+            9)  run_script "install_redshift.sh" "Install Redshift" ;;
+            10) run_script "remove_redshift.sh" "Remove Redshift" ;;
+            11) run_script "install_chrome.sh" "Install Google Chrome" ;;
+            12) run_script "remove_chrome.sh" "Remove Google Chrome" ;;
+            13) run_script "install_chromium.sh" "Install Chromium" ;;
+            14) run_script "remove_chromium.sh" "Remove Chromium" ;;
+            15) run_script "install_xpad.sh" "Install Xpad" ;;
+            16) run_script "remove_xpad.sh" "Remove Xpad" ;;
+            0)  break ;;
             *) echo -e "${RED}Invalid.${NC}"; sleep 1 ;;
         esac
     done
