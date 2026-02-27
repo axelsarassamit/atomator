@@ -268,6 +268,7 @@ Each data collection script saves results to a timestamped file. Use the "View l
 | 1 | `run_remote_command.sh` | Prompts you for a command, then runs it as root on every host. Full output is shown for each host. Use this for one-off commands you don't have a script for. |
 | 2 | `delete_ssh_keys.sh` | Deletes all SSH keys for all users and root on **this server only** (not remote hosts). Clears known_hosts and authorized_keys, then regenerates the host keys. Asks for confirmation. |
 | 3 | `change_password.sh` | Changes the SSH user's password on all remote hosts. Asks for the new password (with confirmation), updates each host, then saves the new password to `credentials.conf`. |
+| 4 | `fix_slow_sudo.sh` | Fixes slow sudo by adding each host's hostname to `/etc/hosts`. Prevents DNS lookup timeout that causes sudo to hang for seconds. |
 
 ### 7. File Management
 
@@ -492,6 +493,7 @@ After installation, `/remote_tools/` contains:
   run_remote_command.sh            # Run custom command
   delete_ssh_keys.sh               # Delete SSH keys (local)
   change_password.sh               # Change remote password
+  fix_slow_sudo.sh                 # Fix slow sudo (hostname in /etc/hosts)
   manage_hosts.sh                  # Manage hosts.txt
   install_connectivity_watchdog.sh # Install network watchdog
   remove_connectivity_watchdog.sh  # Remove network watchdog
@@ -508,6 +510,7 @@ After installation, `/remote_tools/` contains:
 
 | Version | Date | Changes |
 |---------|------|---------|
+| v.02.05.00 | 2026-02-27 | Added fix_slow_sudo.sh to Tools menu - fixes slow sudo by adding hostname to /etc/hosts on all hosts. |
 | v.02.04.01 | 2026-02-27 | Fixed GitHub update: use API endpoint instead of raw CDN to avoid cache delay. |
 | v.02.04.00 | 2026-02-27 | Added install_simplenote.sh and install_redshift.sh to Software menu. |
 | v.02.03.03 | 2026-02-25 | check_hosts.sh now shows hostname for online hosts via SSH. |

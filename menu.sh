@@ -232,15 +232,17 @@ menu_tools() {
         echo -e "   ${YELLOW}1.${NC} Run custom command             (execute anything on all hosts)"
         echo -e "   ${YELLOW}2.${NC} Delete SSH keys (local)        (clean keys on this server)"
         echo -e "   ${YELLOW}3.${NC} Change remote password         (change SSH user password)"
+        echo -e "   ${YELLOW}4.${NC} Fix slow sudo                 (add hostname to /etc/hosts)"
         echo ""
         echo -e "   ${RED}0.${NC} Back"
         echo ""
-        read -p "  Choice [0-3]: " c
+        read -p "  Choice [0-4]: " c
         log_action "SUBMENU tools: choice=$c"
         case $c in
             1) run_script "run_remote_command.sh" "Run Custom Command" ;;
             2) run_script "delete_ssh_keys.sh" "Delete SSH Keys (Local)" ;;
             3) run_script "change_password.sh" "Change Remote Password" ;;
+            4) run_script "fix_slow_sudo.sh" "Fix Slow Sudo" ;;
             0) break ;;
             *) echo -e "${RED}Invalid.${NC}"; sleep 1 ;;
         esac

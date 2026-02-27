@@ -62,3 +62,6 @@
 
 ## v.02.04.01
 - Fixed GitHub update: use API endpoint instead of raw CDN to avoid cache delay
+
+## v.02.05.00
+- Added fix_slow_sudo.sh - adds hostname to /etc/hosts to fix slow sudo on all hosts
