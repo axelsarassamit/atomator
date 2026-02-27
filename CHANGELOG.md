@@ -65,3 +65,6 @@
 
 ## v.02.05.00
 - Added fix_slow_sudo.sh - adds hostname to /etc/hosts to fix slow sudo on all hosts
+
+## v.02.05.01
+- Added fix_hostname_display.sh - repairs conky hostname display (kills stuck processes, recreates config, restarts immediately)

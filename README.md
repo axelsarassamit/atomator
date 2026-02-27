@@ -244,10 +244,11 @@ Each data collection script saves results to a timestamped file. Use the "View l
 | 1 | `install_firefox.sh` | Installs Firefox (or Firefox ESR as fallback) and creates a desktop shortcut for all users. |
 | 2 | `uninstall_firefox.sh` | Removes Firefox and locale packages. User profiles in `~/.mozilla` are kept. |
 | 3 | `install_hostname_display.sh` | Installs Conky and creates a configuration that displays the computer's hostname in the bottom-right corner of the desktop. Auto-starts on login. Useful for identifying which computer you're looking at. |
-| 4 | `install_wine.sh` | Installs Wine (32-bit and 64-bit) and Winetricks for running Windows .exe files. |
-| 5 | `remove_wine.sh` | Removes Wine packages and deletes all `~/.wine` directories. |
-| 6 | `install_simplenote.sh` | Installs Simplenote note-taking app via snap on all hosts. |
-| 7 | `install_redshift.sh` | Installs Redshift and redshift-gtk for automatic screen color temperature adjustment. Creates autostart entry for all users. |
+| 4 | `fix_hostname_display.sh` | Repairs hostname display: kills stuck conky processes, recreates config and autostart, starts conky immediately for logged-in users. |
+| 5 | `install_wine.sh` | Installs Wine (32-bit and 64-bit) and Winetricks for running Windows .exe files. |
+| 6 | `remove_wine.sh` | Removes Wine packages and deletes all `~/.wine` directories. |
+| 7 | `install_simplenote.sh` | Installs Simplenote note-taking app via snap on all hosts. |
+| 8 | `install_redshift.sh` | Installs Redshift and redshift-gtk for automatic screen color temperature adjustment. Creates autostart entry for all users. |
 
 ### 5. Configuration
 
@@ -483,6 +484,7 @@ After installation, `/remote_tools/` contains:
   install_firefox.sh               # Install Firefox
   uninstall_firefox.sh             # Uninstall Firefox
   install_hostname_display.sh      # Install hostname display
+  fix_hostname_display.sh          # Fix/repair hostname display
   install_wine.sh                  # Install Wine
   remove_wine.sh                   # Remove Wine
   install_simplenote.sh            # Install Simplenote
@@ -510,6 +512,7 @@ After installation, `/remote_tools/` contains:
 
 | Version | Date | Changes |
 |---------|------|---------|
+| v.02.05.01 | 2026-02-27 | Added fix_hostname_display.sh - repairs conky hostname display when not showing. |
 | v.02.05.00 | 2026-02-27 | Added fix_slow_sudo.sh to Tools menu - fixes slow sudo by adding hostname to /etc/hosts on all hosts. |
 | v.02.04.01 | 2026-02-27 | Fixed GitHub update: use API endpoint instead of raw CDN to avoid cache delay. |
 | v.02.04.00 | 2026-02-27 | Added install_simplenote.sh and install_redshift.sh to Software menu. |

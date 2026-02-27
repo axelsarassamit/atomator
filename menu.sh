@@ -178,23 +178,25 @@ menu_software() {
         echo -e "   ${YELLOW}1.${NC} Install Firefox"
         echo -e "   ${YELLOW}2.${NC} Uninstall Firefox"
         echo -e "   ${YELLOW}3.${NC} Install hostname display       (conky on desktop)"
-        echo -e "   ${YELLOW}4.${NC} Install Wine                   (run Windows .exe files)"
-        echo -e "   ${YELLOW}5.${NC} Remove Wine"
-        echo -e "   ${YELLOW}6.${NC} Install Simplenote              (note-taking app)"
-        echo -e "   ${YELLOW}7.${NC} Install Redshift                (screen color temperature)"
+        echo -e "   ${YELLOW}4.${NC} Fix hostname display           (repair/restart conky)"
+        echo -e "   ${YELLOW}5.${NC} Install Wine                   (run Windows .exe files)"
+        echo -e "   ${YELLOW}6.${NC} Remove Wine"
+        echo -e "   ${YELLOW}7.${NC} Install Simplenote              (note-taking app)"
+        echo -e "   ${YELLOW}8.${NC} Install Redshift                (screen color temperature)"
         echo ""
         echo -e "   ${RED}0.${NC} Back"
         echo ""
-        read -p "  Choice [0-7]: " c
+        read -p "  Choice [0-8]: " c
         log_action "SUBMENU software: choice=$c"
         case $c in
             1) run_script "install_firefox.sh" "Install Firefox" ;;
             2) run_script "uninstall_firefox.sh" "Uninstall Firefox" ;;
             3) run_script "install_hostname_display.sh" "Install Hostname Display" ;;
-            4) run_script "install_wine.sh" "Install Wine" ;;
-            5) run_script "remove_wine.sh" "Remove Wine" ;;
-            6) run_script "install_simplenote.sh" "Install Simplenote" ;;
-            7) run_script "install_redshift.sh" "Install Redshift" ;;
+            4) run_script "fix_hostname_display.sh" "Fix Hostname Display" ;;
+            5) run_script "install_wine.sh" "Install Wine" ;;
+            6) run_script "remove_wine.sh" "Remove Wine" ;;
+            7) run_script "install_simplenote.sh" "Install Simplenote" ;;
+            8) run_script "install_redshift.sh" "Install Redshift" ;;
             0) break ;;
             *) echo -e "${RED}Invalid.${NC}"; sleep 1 ;;
         esac
