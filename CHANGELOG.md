@@ -59,3 +59,6 @@
 ## v.02.04.00
 - Added install_simplenote.sh (snap-based note-taking app)
 - Added install_redshift.sh (screen color temperature with autostart)
+
+## v.02.04.01
+- Fixed GitHub update: use API endpoint instead of raw CDN to avoid cache delay

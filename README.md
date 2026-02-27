@@ -508,6 +508,7 @@ After installation, `/remote_tools/` contains:
 
 | Version | Date | Changes |
 |---------|------|---------|
+| v.02.04.01 | 2026-02-27 | Fixed GitHub update: use API endpoint instead of raw CDN to avoid cache delay. |
 | v.02.04.00 | 2026-02-27 | Added install_simplenote.sh and install_redshift.sh to Software menu. |
 | v.02.03.03 | 2026-02-25 | check_hosts.sh now shows hostname for online hosts via SSH. |
 | v.02.03.02 | 2026-02-25 | Changelog reversed: oldest first, newest last. Latest changes now visible at bottom of update screen. |

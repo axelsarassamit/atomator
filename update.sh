@@ -3,7 +3,7 @@ set +e
 
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC='\033[0m'
 TARGET_DIR="/remote_tools"
-GITHUB_URL="https://raw.githubusercontent.com/axelsarassamit/atomator/main/quick_install.sh"
+GITHUB_URL="https://api.github.com/repos/axelsarassamit/atomator/contents/quick_install.sh"
 
 echo -e "${CYAN}=== Atomator - Update Scripts ===${NC}"
 echo ""
@@ -54,7 +54,7 @@ case $update_choice in
         echo ""
         echo "Downloading from GitHub..."
         TMP_FILE="/tmp/automator_github_update.sh"
-        curl -sL "$GITHUB_URL" -o "$TMP_FILE"
+        curl -sL -H "Accept: application/vnd.github.v3.raw" "$GITHUB_URL" -o "$TMP_FILE"
         if [ ! -s "$TMP_FILE" ]; then
             echo -e "${RED}Download failed. Check your internet connection.${NC}"
             exit 1
