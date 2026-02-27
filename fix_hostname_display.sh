@@ -61,7 +61,8 @@ DESKTOP
     chown "$user:$user" "$user_home/.config/autostart/conky-hostname.desktop"
     # Start conky now for logged-in users
     if who | grep -q "^$user "; then
-        su - "$user" -c "DISPLAY=:0 conky -c $user_home/.config/conky_hostname.conf -d" 2>/dev/null || true
+        su - "$user" -c "DISPLAY=:0 nohup conky -c $user_home/.config/conky_hostname.conf -d >/dev/null 2>&1 &" 2>/dev/null || true
+        sleep 1
     fi
     FIXED=$((FIXED + 1))
 done

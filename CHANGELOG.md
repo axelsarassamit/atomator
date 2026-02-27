@@ -76,3 +76,6 @@
 
 ## v.02.06.01
 - Improved fix_slow_sudo.sh: fixes 127.0.1.1 line, nsswitch.conf order, verifies hostname resolution
+
+## v.02.06.02
+- Fixed fix_hostname_display.sh hanging: conky now fully detached with nohup so SSH session doesn't get stuck
