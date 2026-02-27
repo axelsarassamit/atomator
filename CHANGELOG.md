@@ -94,3 +94,7 @@
 - Fixed black background: removed ARGB transparency (fails without compositor), uses pseudo-transparency instead
 - Removed text shadow that caused dark appearance
 - Both install and fix scripts updated with same clean config
+
+## v.02.07.02
+- Hostname display: added black outline on white text for better readability
+- Moved closer to taskbar (gap_y 26) to match desired position
