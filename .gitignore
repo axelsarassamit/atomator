@@ -30,3 +30,6 @@ debug.log.1
 
 # OS files
 .DS_Store
+
+# Editor / agent session metadata
+.claude/
