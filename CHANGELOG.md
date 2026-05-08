@@ -105,3 +105,13 @@
 
 ## v.02.07.04
 - Fix hostname display: proper restart without reboot - removes autostart first, force kills all conky, verifies dead, then starts fresh
+
+## v.02.08.00
+- Minor changes and improvement: all scripts now run in parallel (configurable via MAX_PARALLEL, default 5-10)
+- Significantly faster execution on large host fleets (up to 10x speedup)
+- Added elapsed time display to all scripts
+- Added progress counter showing [current/total] during execution
+- Added ServerAliveInterval to prevent SSH timeouts on slow connections
+- Reboot and shutdown now fire commands in parallel (instant dispatch)
+- Consistent OK/FAIL result summary across all scripts
+- Temp files cleaned up automatically via trap on exit
