@@ -6,7 +6,7 @@
 # Run on your Debian server: sudo bash quick_install.sh
 # ============================================================================
 
-VERSION="02.07.04"
+VERSION="02.08.00"
 
 set -e
 
