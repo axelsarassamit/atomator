@@ -1,14 +1,16 @@
 #!/bin/bash
 set +e
 
-RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC='\033[0m'
+RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; DIM='\033[2m'; BOLD='\033[1m'; NC='\033[0m'
 TARGET_DIR="/remote_tools"
-GITHUB_URL="https://api.github.com/repos/axelsarassamit/atomator/contents/quick_install.sh"
+REPO_OWNER="axelsarassamit"
+REPO_NAME="atomator"
+BRANCH="main"
+API_BASE="https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}"
 
-echo -e "${CYAN}=== Atomator - Update Scripts ===${NC}"
+echo -e "${CYAN}${BOLD}=== Atomator - Update Scripts ===${NC}"
 echo ""
 
-# Show current version
 if [ -f "$TARGET_DIR/version.txt" ]; then
     CURRENT=$(head -1 "$TARGET_DIR/version.txt")
     INSTALLED=$(tail -1 "$TARGET_DIR/version.txt")
@@ -19,149 +21,135 @@ else
 fi
 echo ""
 
-# Check for local update files
-LOCAL_FILE=$(ls -1 "$TARGET_DIR"/updates/update_v*.sh 2>/dev/null | sort -V | tail -1)
-if [ -z "$LOCAL_FILE" ]; then
-    LOCAL_FILE=$(ls -1 "$TARGET_DIR"/update_v*.sh 2>/dev/null | sort -V | tail -1)
+echo -e "  Checking GitHub for latest version..."
+REMOTE_VERSION=$(curl -sL "${API_BASE}/contents/version.txt?ref=${BRANCH}" -H "Accept: application/vnd.github.v3.raw" 2>/dev/null | head -1)
+if [ -z "$REMOTE_VERSION" ]; then
+    echo -e "  ${RED}Could not reach GitHub. Check your internet connection.${NC}"
+    exit 1
 fi
-
-echo -e "${YELLOW}Update options:${NC}"
+echo -e "  Latest version:    ${YELLOW}v.${REMOTE_VERSION}${NC}"
 echo ""
-if [ -n "$LOCAL_FILE" ]; then
-    LOCAL_NAME=$(basename "$LOCAL_FILE")
-    LOCAL_VER=$(echo "$LOCAL_NAME" | sed 's/update_v\.//;s/update_v//;s/\.sh$//')
-    echo -e "  ${YELLOW}1.${NC} Update from local file  (${LOCAL_NAME} - v.${LOCAL_VER})"
-else
-    echo -e "  ${RED}1.${NC} Update from local file  (no update file found)"
-fi
-echo -e "  ${YELLOW}2.${NC} Download latest from GitHub"
-echo -e "  ${YELLOW}3.${NC} Revert to a previous version"
-echo -e "  ${RED}0.${NC} Cancel"
-echo ""
-read -p "  Choice [0-3]: " update_choice
 
-case $update_choice in
-    1)
-        if [ -z "$LOCAL_FILE" ]; then
+if [ "$CURRENT" = "$REMOTE_VERSION" ]; then
+    echo -e "  ${GREEN}You are already on the latest version.${NC}"
+    echo ""
+    echo -e "  ${YELLOW}1.${NC} Reinstall/refresh all scripts anyway"
+    echo -e "  ${YELLOW}2.${NC} Revert to a previous local version"
+    echo -e "  ${RED}0.${NC} Cancel"
+    echo ""
+    read -p "  Choice [0-2]: " update_choice
+    case $update_choice in
+        1) ;;
+        2)
             echo ""
-            echo -e "${RED}No local update file found.${NC}"
-            exit 1
-        fi
-        UPDATE_FILE="$LOCAL_FILE"
-        NEW_VERSION="$LOCAL_VER"
-        ;;
-    2)
-        echo ""
-        echo "Downloading from GitHub..."
-        TMP_FILE="/tmp/automator_github_update.sh"
-        curl -sL -H "Accept: application/vnd.github.v3.raw" "$GITHUB_URL" -o "$TMP_FILE"
-        if [ ! -s "$TMP_FILE" ]; then
-            echo -e "${RED}Download failed. Check your internet connection.${NC}"
-            exit 1
-        fi
-        NEW_VERSION=$(grep '^VERSION=' "$TMP_FILE" | head -1 | cut -d'"' -f2)
-        if [ -z "$NEW_VERSION" ]; then
-            echo -e "${RED}Could not detect version from downloaded file.${NC}"
-            exit 1
-        fi
-        echo -e "  Downloaded version: ${YELLOW}v.${NEW_VERSION}${NC}"
-        mkdir -p "$TARGET_DIR/updates"
-        UPDATE_FILE="$TARGET_DIR/updates/update_v.${NEW_VERSION}.sh"
-        cp "$TMP_FILE" "$UPDATE_FILE"
-        chmod +x "$UPDATE_FILE"
-        rm -f "$TMP_FILE"
-        ;;
-    3)
-        echo ""
-        echo -e "${CYAN}Available versions:${NC}"
-        echo ""
-        UPDATE_FILES=$(ls -1 "$TARGET_DIR"/updates/update_v*.sh 2>/dev/null | sort -V)
-        if [ -z "$UPDATE_FILES" ]; then
-            UPDATE_FILES=$(ls -1 "$TARGET_DIR"/update_v*.sh 2>/dev/null | sort -V)
-        fi
-        if [ -z "$UPDATE_FILES" ]; then
-            echo -e "${RED}No previous versions found.${NC}"
-            exit 1
-        fi
-        i=1
-        declare -a VERSION_FILES
-        while IFS= read -r f; do
-            FNAME=$(basename "$f")
-            FVER=$(echo "$FNAME" | sed 's/update_v\.//;s/update_v//;s/\.sh$//')
-            if [ "$FVER" = "$CURRENT" ]; then
-                echo -e "  ${YELLOW}${i}.${NC} ${FNAME}  ${GREEN}<-- current${NC}"
-            else
-                echo -e "  ${YELLOW}${i}.${NC} ${FNAME}"
+            echo -e "${CYAN}Available local versions:${NC}"
+            echo ""
+            UPDATE_FILES=$(ls -1 "$TARGET_DIR"/updates/update_v*.sh 2>/dev/null | sort -V)
+            if [ -z "$UPDATE_FILES" ]; then
+                echo -e "${RED}No previous versions found.${NC}"
+                exit 1
             fi
-            VERSION_FILES[$i]="$f"
-            i=$((i + 1))
-        done <<< "$UPDATE_FILES"
-        echo ""
-        read -p "  Select version [1-$((i-1))]: " ver_choice
-        if [ -z "$ver_choice" ] || [ "$ver_choice" -lt 1 ] 2>/dev/null || [ "$ver_choice" -ge "$i" ] 2>/dev/null; then
-            echo "Cancelled."
+            i=1
+            declare -a VERSION_FILES
+            while IFS= read -r f; do
+                FNAME=$(basename "$f")
+                FVER=$(echo "$FNAME" | sed 's/update_v\.//;s/update_v//;s/\.sh$//')
+                if [ "$FVER" = "$CURRENT" ]; then
+                    echo -e "  ${YELLOW}${i}.${NC} ${FNAME}  ${GREEN}<-- current${NC}"
+                else
+                    echo -e "  ${YELLOW}${i}.${NC} ${FNAME}"
+                fi
+                VERSION_FILES[$i]="$f"
+                i=$((i + 1))
+            done <<< "$UPDATE_FILES"
+            echo ""
+            read -p "  Select version [1-$((i-1))]: " ver_choice
+            if [ -z "$ver_choice" ] || [ "$ver_choice" -lt 1 ] 2>/dev/null || [ "$ver_choice" -ge "$i" ] 2>/dev/null; then
+                echo "Cancelled."; exit 0
+            fi
+            echo ""
+            echo "Running installer..."
+            bash "${VERSION_FILES[$ver_choice]}"
+            for f in hosts.txt mac_addresses.txt wallpapers.txt credentials.conf watchdog_hosts.conf; do
+                [ -f "/root/${f}.backup" ] && [ ! -f "$TARGET_DIR/$f" ] && cp "/root/${f}.backup" "$TARGET_DIR/$f"
+            done
+            echo -e "${GREEN}Reverted.${NC}"
             exit 0
-        fi
-        UPDATE_FILE="${VERSION_FILES[$ver_choice]}"
-        NEW_VERSION=$(basename "$UPDATE_FILE" | sed 's/update_v\.//;s/update_v//;s/\.sh$//')
-        ;;
-    *)
-        echo "Cancelled."
-        exit 0
-        ;;
-esac
-
-echo ""
-
-# Show changelog from the new version being installed
-NEW_CHANGELOG=$(sed -n "/cat > CHANGELOG.md << 'CLEOF'/,/^CLEOF$/{/cat > CHANGELOG.md/d;/^CLEOF$/d;p;}" "$UPDATE_FILE" 2>/dev/null)
-if [ -n "$NEW_CHANGELOG" ]; then
-    echo -e "${CYAN}Version changes (new version):${NC}"
-    echo "$NEW_CHANGELOG"
-    echo ""
-elif [ -f "$TARGET_DIR/CHANGELOG.md" ]; then
-    echo -e "${CYAN}Version changes:${NC}"
-    cat "$TARGET_DIR/CHANGELOG.md"
-    echo ""
-fi
-
-# Version comparison
-if [ "$CURRENT" = "$NEW_VERSION" ]; then
-    echo -e "${YELLOW}Same version (v.${NEW_VERSION}). Reinstall anyway?${NC}"
-    read -p "(yes/no): " confirm
-    if [ "$confirm" != "yes" ]; then echo "Cancelled."; exit 0; fi
+            ;;
+        *) echo "Cancelled."; exit 0 ;;
+    esac
 else
-    echo -e "  Update: ${GREEN}v.${CURRENT}${NC} -> ${YELLOW}v.${NEW_VERSION}${NC}"
-    read -p "Proceed? (yes/no): " confirm
+    echo -e "  Update available: ${GREEN}v.${CURRENT}${NC} -> ${YELLOW}v.${REMOTE_VERSION}${NC}"
+    echo ""
+    read -p "  Download and install? (yes/no): " confirm
     if [ "$confirm" != "yes" ]; then echo "Cancelled."; exit 0; fi
 fi
 
 echo ""
 
-# Backup config files
 echo "Backing up config files..."
 for f in hosts.txt mac_addresses.txt wallpapers.txt credentials.conf watchdog_hosts.conf; do
     if [ -f "$TARGET_DIR/$f" ]; then
         cp "$TARGET_DIR/$f" "/root/${f}.backup"
-        echo "  Backed up: $f -> /root/${f}.backup"
     fi
 done
 echo ""
 
-# Run the installer
-FILENAME=$(basename "$UPDATE_FILE")
-echo "Running $FILENAME..."
-echo ""
-bash "$UPDATE_FILE"
+echo "Fetching file list from GitHub..."
+FILE_LIST=$(curl -sL "${API_BASE}/contents?ref=${BRANCH}" -H "Accept: application/vnd.github.v3+json" 2>/dev/null)
+if [ -z "$FILE_LIST" ]; then
+    echo -e "${RED}Failed to get file list.${NC}"
+    exit 1
+fi
 
-# Restore config files if missing
+SCRIPTS=$(echo "$FILE_LIST" | grep '"name"' | grep '\.sh"' | sed 's/.*"name": "//;s/".*//')
+OTHER_FILES="CHANGELOG.md README.md version.txt"
+
+TOTAL=$(echo "$SCRIPTS" | wc -l)
+TOTAL=$((TOTAL + 3))
+COUNT=0
+FAILED=0
+
+echo "Downloading $TOTAL files..."
+echo ""
+
+cd "$TARGET_DIR" || exit 1
+
+for file in $SCRIPTS; do
+    COUNT=$((COUNT + 1))
+    echo -ne "  [$COUNT/$TOTAL] $file... "
+    curl -sL "${API_BASE}/contents/${file}?ref=${BRANCH}" -H "Accept: application/vnd.github.v3.raw" -o "$file" 2>/dev/null
+    if [ -s "$file" ]; then
+        chmod +x "$file"
+        echo -e "${GREEN}OK${NC}"
+    else
+        echo -e "${RED}FAILED${NC}"
+        FAILED=$((FAILED + 1))
+    fi
+done
+
+for file in $OTHER_FILES; do
+    COUNT=$((COUNT + 1))
+    echo -ne "  [$COUNT/$TOTAL] $file... "
+    curl -sL "${API_BASE}/contents/${file}?ref=${BRANCH}" -H "Accept: application/vnd.github.v3.raw" -o "$file" 2>/dev/null
+    if [ -s "$file" ]; then
+        echo -e "${GREEN}OK${NC}"
+    else
+        echo -e "${RED}FAILED${NC}"
+        FAILED=$((FAILED + 1))
+    fi
+done
+
+echo ""
+
 for f in hosts.txt mac_addresses.txt wallpapers.txt credentials.conf watchdog_hosts.conf; do
-    if [ -f "/root/${f}.backup" ] && [ ! -f "$TARGET_DIR/$f" ]; then
+    if [ -f "/root/${f}.backup" ]; then
         cp "/root/${f}.backup" "$TARGET_DIR/$f"
-        echo "Restored: $f"
     fi
 done
 
+echo -e "${GREEN}${BOLD}Update complete!${NC}"
+echo -e "  Version: ${YELLOW}v.$(head -1 version.txt 2>/dev/null)${NC}"
+echo -e "  Files:   $((COUNT - FAILED)) OK, $FAILED failed"
 echo ""
-echo -e "${GREEN}Update complete.${NC}"
-echo "  Update file kept: $UPDATE_FILE"
+echo -e "${DIM}  Config files preserved (hosts.txt, credentials.conf, etc.)${NC}"
