@@ -115,3 +115,23 @@
 - Reboot and shutdown now fire commands in parallel (instant dispatch)
 - Consistent OK/FAIL result summary across all scripts
 - Temp files cleaned up automatically via trap on exit
+
+## v.02.08.01
+- Complete UI redesign of menu system
+- Modern TUI with Unicode box drawing characters
+- Added emoji icons to all menu items for quick visual scanning
+- New branded header with ATOMATOR title, version, host count, and clock
+- Grouped sections with labeled box borders
+- Cyan prompt replaces plain Choice text
+- Dim descriptions next to each menu item
+- Power icon for exit, arrow for back navigation
+- Cleaner helper functions: show_item, show_section, show_divider
+
+## v.02.08.02
+- Rewrote update mechanism to download individual files from GitHub
+- No longer depends on monolithic quick_install.sh for updates
+- Auto-detects all .sh files in repo and downloads them
+- Shows progress [1/40] for each file during update
+- Preserves config files (hosts.txt, credentials.conf, etc.)
+- Version check compares local version.txt against GitHub version.txt
+- Revert option still uses local update_v*.sh installers
