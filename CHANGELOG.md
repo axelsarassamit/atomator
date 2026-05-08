@@ -107,7 +107,7 @@
 - Fix hostname display: proper restart without reboot - removes autostart first, force kills all conky, verifies dead, then starts fresh
 
 ## v.02.08.00
-- Minor changes and improvement: all scripts now run in parallel (configurable via MAX_PARALLEL, default 5-10)
+- All scripts now run in parallel (configurable via MAX_PARALLEL, default 5-10)
 - Significantly faster execution on large host fleets (up to 10x speedup)
 - Added elapsed time display to all scripts
 - Added progress counter showing [current/total] during execution
@@ -118,13 +118,11 @@
 
 ## v.02.08.01
 - Complete UI redesign of menu system
-- Modern TUI with Unicode box drawing characters
-- Added emoji icons to all menu items for quick visual scanning
+- Modern TUI with emoji icons for quick visual scanning
 - New branded header with ATOMATOR title, version, host count, and clock
-- Grouped sections with labeled box borders
+- Grouped sections with labeled subsection headers
 - Cyan prompt replaces plain Choice text
 - Dim descriptions next to each menu item
-- Power icon for exit, arrow for back navigation
 - Cleaner helper functions: show_item, show_section, show_divider
 
 ## v.02.08.02
@@ -135,3 +133,11 @@
 - Preserves config files (hosts.txt, credentials.conf, etc.)
 - Version check compares local version.txt against GitHub version.txt
 - Revert option still uses local update_v*.sh installers
+
+## v.02.08.03
+- Fixed update.sh: uses raw.githubusercontent.com instead of API to avoid rate limits
+- Added fallback file list when API is unavailable
+- Added validation to reject error responses as downloaded files
+- Pushed all missing scripts to GitHub (install_server_watchdog.sh, change_watchdog_timer.sh)
+- All 60 .sh files now confirmed present on GitHub
+- Updated quick_install.sh VERSION to match
