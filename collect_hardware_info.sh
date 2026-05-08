@@ -4,17 +4,24 @@ source ./credentials.conf 2>/dev/null || { echo "ERROR: credentials.conf not fou
 echo "=== Collect Hardware Info ==="
 echo "Gathers hostname, manufacturer, model, CPU, RAM, disk from all hosts."
 echo ""
-HOST_COUNT=$(grep -v "^#" hosts.txt | grep -v "^$" | wc -l | tr -d ' ')
+START_TIME=$(date +%s)
+MAX_JOBS=${MAX_PARALLEL:-10}
+HOSTS=($(grep -v "^#" hosts.txt | grep -v "^$"))
+TOTAL=${#HOSTS[@]}
 OUTPUT_FILE="hardware_info_$(date +%Y%m%d_%H%M%S).txt"
+TMPDIR=$(mktemp -d)
+trap "rm -rf $TMPDIR" EXIT
+
 echo "Report: Hardware Info" > "$OUTPUT_FILE"
 echo "Date: $(date '+%Y-%m-%d %H:%M:%S')" >> "$OUTPUT_FILE"
-echo "Hosts: $HOST_COUNT" >> "$OUTPUT_FILE"
+echo "Hosts: $TOTAL" >> "$OUTPUT_FILE"
 echo "" >> "$OUTPUT_FILE"
 printf "IP\tHostname\tManufacturer\tModel\tSerial\tCPU\tCores\tRAM\tDisk_Total\tDisk_Free\tOS\tKernel\tUptime\n" >> "$OUTPUT_FILE"
-ONLINE=0; OFFLINE=0
-for host in $(grep -v "^#" hosts.txt | grep -v "^$"); do
-    echo -n "[$host] Collecting... "
-    RESULT=$(sshpass -p "$SSH_PASS" ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$SSH_USER"@"$host" \
+
+collect_host() {
+    local host="$1" idx="$2"
+    local result
+    result=$(sshpass -p "$SSH_PASS" ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 -o ServerAliveInterval=30 "$SSH_USER"@"$host" \
         'echo '"$SSH_PASS"' | sudo -S bash -c "
         HNAME=\$(hostname)
         MFR=\$(dmidecode -s system-manufacturer 2>/dev/null || echo N/A)
@@ -29,7 +36,26 @@ for host in $(grep -v "^#" hosts.txt | grep -v "^$"); do
         KER=\$(uname -r)
         UPT=\$(uptime -p 2>/dev/null || echo N/A)
         echo \"\$HNAME|\$MFR|\$MDL|\$SER|\$CPU|\$COR|\$RAM|\$DTOT|\$DFREE|\$OS|\$KER|\$UPT\"
-    "' 2>/dev/null) || true
+    "' 2>/dev/null)
+    if [ -n "$result" ]; then
+        echo "$result" > "$TMPDIR/$idx"
+    else
+        echo "" > "$TMPDIR/$idx"
+    fi
+}
+
+for i in "${!HOSTS[@]}"; do
+    collect_host "${HOSTS[$i]}" "$i" &
+    echo "[$((i+1))/$TOTAL] ${HOSTS[$i]} - collecting..."
+    while [ $(jobs -r | wc -l) -ge $MAX_JOBS ]; do sleep 0.3; done
+done
+wait
+
+echo ""
+ONLINE=0; OFFLINE=0
+for i in "${!HOSTS[@]}"; do
+    RESULT=""
+    [ -f "$TMPDIR/$i" ] && RESULT=$(cat "$TMPDIR/$i")
     if [ -n "$RESULT" ]; then
         HNAME=$(echo "$RESULT" | cut -d'|' -f1)
         MFR=$(echo "$RESULT" | cut -d'|' -f2)
@@ -43,17 +69,19 @@ for host in $(grep -v "^#" hosts.txt | grep -v "^$"); do
         OS=$(echo "$RESULT" | cut -d'|' -f10)
         KER=$(echo "$RESULT" | cut -d'|' -f11)
         UPT=$(echo "$RESULT" | cut -d'|' -f12-)
-        echo -e "\033[0;32mOK\033[0m - $HNAME | $MFR $MDL | $RAM RAM"
-        printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n" "$host" "$HNAME" "$MFR" "$MDL" "$SER" "$CPU" "$COR" "$RAM" "$DTOT" "$DFREE" "$OS" "$KER" "$UPT" >> "$OUTPUT_FILE"
+        echo -e "  \033[0;32mOK\033[0m ${HOSTS[$i]} ($HNAME) | $MFR $MDL | $RAM RAM"
+        printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n" "${HOSTS[$i]}" "$HNAME" "$MFR" "$MDL" "$SER" "$CPU" "$COR" "$RAM" "$DTOT" "$DFREE" "$OS" "$KER" "$UPT" >> "$OUTPUT_FILE"
         ONLINE=$((ONLINE + 1))
     else
-        echo -e "\033[0;31mFAILED\033[0m"
-        printf "%s\t-\t-\t-\t-\t-\t-\t-\t-\t-\t-\t-\tOFFLINE\n" "$host" >> "$OUTPUT_FILE"
+        echo -e "  \033[0;31mFAILED\033[0m ${HOSTS[$i]}"
+        printf "%s\t-\t-\t-\t-\t-\t-\t-\t-\t-\t-\t-\tOFFLINE\n" "${HOSTS[$i]}" >> "$OUTPUT_FILE"
         OFFLINE=$((OFFLINE + 1))
     fi
 done
+
 echo "" >> "$OUTPUT_FILE"
-echo "Total: $HOST_COUNT hosts | Online: $ONLINE | Offline: $OFFLINE" >> "$OUTPUT_FILE"
+echo "Total: $TOTAL hosts | Online: $ONLINE | Offline: $OFFLINE" >> "$OUTPUT_FILE"
+ELAPSED=$(( $(date +%s) - START_TIME ))
 echo ""
-echo "Online: $ONLINE | Offline: $OFFLINE"
+echo "Online: $ONLINE | Offline: $OFFLINE | ${ELAPSED}s"
 echo "Saved to: $OUTPUT_FILE"
