@@ -6,6 +6,7 @@ TARGET_DIR="/remote_tools"
 REPO_OWNER="axelsarassamit"
 REPO_NAME="atomator"
 BRANCH="main"
+RAW_BASE="https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/${BRANCH}"
 API_BASE="https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}"
 
 echo -e "${CYAN}${BOLD}=== Atomator - Update Scripts ===${NC}"
@@ -21,8 +22,8 @@ else
 fi
 echo ""
 
-echo -e "  Checking GitHub for latest version..."
-REMOTE_VERSION=$(curl -sL "${API_BASE}/contents/version.txt?ref=${BRANCH}" -H "Accept: application/vnd.github.v3.raw" 2>/dev/null | head -1)
+echo -e "  Checking for latest version..."
+REMOTE_VERSION=$(curl -sL "${RAW_BASE}/version.txt" 2>/dev/null | head -1)
 if [ -z "$REMOTE_VERSION" ]; then
     echo -e "  ${RED}Could not reach GitHub. Check your internet connection.${NC}"
     exit 1
@@ -97,15 +98,31 @@ echo ""
 
 echo "Fetching file list from GitHub..."
 FILE_LIST=$(curl -sL "${API_BASE}/contents?ref=${BRANCH}" -H "Accept: application/vnd.github.v3+json" 2>/dev/null)
-if [ -z "$FILE_LIST" ]; then
-    echo -e "${RED}Failed to get file list.${NC}"
-    exit 1
+
+if echo "$FILE_LIST" | grep -q '"name"'; then
+    SCRIPTS=$(echo "$FILE_LIST" | grep '"name"' | grep '\.sh"' | sed 's/.*"name": "//;s/".*//')
+else
+    echo -e "  ${YELLOW}API rate limited. Using known file list...${NC}"
+    SCRIPTS="check_disk_space.sh check_hosts.sh check_services.sh check_uptime.sh
+change_dns.sh change_password.sh change_watchdog_timer.sh
+cleanup_all.sh collect_hardware_info.sh collect_mac_addresses.sh collect_ram_info.sh
+configure_watchdog_hosts.sh check_watchdog_status.sh
+disable_auto_updates.sh disable_wifi.sh
+fix_hostname_display.sh fix_slow_sudo.sh fix_static_ip.sh
+install_chrome.sh install_chromium.sh install_connectivity_watchdog.sh
+install_firefox.sh install_hostname_display.sh install_redshift.sh
+install_server_watchdog.sh install_simplenote.sh install_wine.sh install_xpad.sh
+manage_hosts.sh manage_wallpapers.sh menu.sh
+reboot.sh remove_chrome.sh remove_chromium.sh remove_connectivity_watchdog.sh
+remove_redshift.sh remove_simplenote.sh remove_vpn_reset_network.sh
+remove_wine.sh remove_xpad.sh require_sudo_network.sh restrict_chromium_cpu.sh
+run_remote_command.sh set_wallpaper.sh shutdown_all.sh speedtest_all.sh
+uninstall_firefox.sh update.sh update_all.sh update_and_remove_all.sh wol_all.sh"
 fi
 
-SCRIPTS=$(echo "$FILE_LIST" | grep '"name"' | grep '\.sh"' | sed 's/.*"name": "//;s/".*//')
 OTHER_FILES="CHANGELOG.md README.md version.txt"
 
-TOTAL=$(echo "$SCRIPTS" | wc -l)
+TOTAL=$(echo "$SCRIPTS" | wc -w)
 TOTAL=$((TOTAL + 3))
 COUNT=0
 FAILED=0
@@ -118,12 +135,13 @@ cd "$TARGET_DIR" || exit 1
 for file in $SCRIPTS; do
     COUNT=$((COUNT + 1))
     echo -ne "  [$COUNT/$TOTAL] $file... "
-    curl -sL "${API_BASE}/contents/${file}?ref=${BRANCH}" -H "Accept: application/vnd.github.v3.raw" -o "$file" 2>/dev/null
-    if [ -s "$file" ]; then
+    curl -sL "${RAW_BASE}/${file}" -o "$file" 2>/dev/null
+    if [ -s "$file" ] && ! head -1 "$file" | grep -q "^{" && ! head -1 "$file" | grep -q "rate limit"; then
         chmod +x "$file"
         echo -e "${GREEN}OK${NC}"
     else
         echo -e "${RED}FAILED${NC}"
+        rm -f "$file"
         FAILED=$((FAILED + 1))
     fi
 done
@@ -131,11 +149,12 @@ done
 for file in $OTHER_FILES; do
     COUNT=$((COUNT + 1))
     echo -ne "  [$COUNT/$TOTAL] $file... "
-    curl -sL "${API_BASE}/contents/${file}?ref=${BRANCH}" -H "Accept: application/vnd.github.v3.raw" -o "$file" 2>/dev/null
-    if [ -s "$file" ]; then
+    curl -sL "${RAW_BASE}/${file}" -o "$file" 2>/dev/null
+    if [ -s "$file" ] && ! head -1 "$file" | grep -q "rate limit"; then
         echo -e "${GREEN}OK${NC}"
     else
         echo -e "${RED}FAILED${NC}"
+        rm -f "$file"
         FAILED=$((FAILED + 1))
     fi
 done
