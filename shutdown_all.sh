@@ -3,13 +3,15 @@ set +e
 source ./credentials.conf 2>/dev/null || { echo "ERROR: credentials.conf not found!"; exit 1; }
 echo "=== Shutdown All Hosts ==="
 echo ""
+HOSTS=($(grep -v "^#" hosts.txt | grep -v "^$"))
+TOTAL=${#HOSTS[@]}
+echo "This will shutdown $TOTAL hosts."
 read -p "Are you sure you want to SHUTDOWN ALL hosts? (yes/no): " confirm
 if [ "$confirm" != "yes" ]; then echo "Cancelled."; exit 0; fi
 echo ""
-for host in $(grep -v "^#" hosts.txt | grep -v "^$"); do
-    echo "[$host] Shutting down..."
-    sshpass -p "$SSH_PASS" ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$SSH_USER"@"$host" \
-        'echo '"$SSH_PASS"' | sudo -S shutdown -h now' 2>/dev/null || true
+for host in "${HOSTS[@]}"; do
+    sshpass -p "$SSH_PASS" ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 "$SSH_USER"@"$host" \
+        'echo '"$SSH_PASS"' | sudo -S shutdown -h now' &>/dev/null &
 done
-echo ""
-echo "Shutdown command sent to all hosts."
+wait
+echo "Shutdown command sent to $TOTAL hosts."
