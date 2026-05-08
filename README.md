@@ -158,6 +158,8 @@ Lines starting with `#` in `hosts.txt` are ignored (comments). Empty lines are s
 
 | Version | Date | Changes |
 |---------|------|---------|
+| v.02.08.02 | 2026-05-08 | New update mechanism: downloads individual files from GitHub instead of monolithic installer. Instant updates on every push. |
+| v.02.08.01 | 2026-05-08 | Complete UI redesign: modern TUI with icons, box drawing, branded header, status bar. |
 | v.02.08.00 | 2026-05-08 | Performance: all scripts now execute in parallel (configurable via MAX_PARALLEL env var). Up to 10x faster on large fleets. Added elapsed time, progress counters, ServerAliveInterval, and consistent result summaries. |
 | v.02.07.04 | 2026-02-27 | Fix hostname display: proper restart without reboot - kills old conky cleanly then starts fresh. |
 | v.02.07.03 | 2026-02-27 | Fixed black background: enables Xfce compositor for true ARGB transparency on hostname display. |
