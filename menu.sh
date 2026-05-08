@@ -2,7 +2,6 @@
 BOLD='\033[1m'; DIM='\033[2m'
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; BLUE='\033[0;34m'
 CYAN='\033[0;36m'; MAGENTA='\033[0;35m'; WHITE='\033[1;37m'; NC='\033[0m'
-BG_CYAN='\033[46m'; BG_BLUE='\033[44m'; BG_DARK='\033[100m'
 
 VERSION=$(head -1 version.txt 2>/dev/null || echo "unknown")
 INSTALLED=$(tail -1 version.txt 2>/dev/null || echo "unknown")
@@ -22,23 +21,27 @@ show_header() {
     local HOST_COUNT=$(grep -v "^#" hosts.txt 2>/dev/null | grep -v "^$" | wc -l)
     local NOW=$(date '+%H:%M:%S')
     echo ""
-    echo -e "  ${CYAN}${BOLD}┌─────────────────────────────────────────────────────────────────┐${NC}"
-    echo -e "  ${CYAN}${BOLD}│${NC}                                                                 ${CYAN}${BOLD}│${NC}"
-    echo -e "  ${CYAN}${BOLD}│${NC}     ${WHITE}${BOLD}⚡  A T O M A T O R${NC}                                        ${CYAN}${BOLD}│${NC}"
-    echo -e "  ${CYAN}${BOLD}│${NC}     ${DIM}Remote Xubuntu Management System${NC}                           ${CYAN}${BOLD}│${NC}"
-    echo -e "  ${CYAN}${BOLD}│${NC}                                                                 ${CYAN}${BOLD}│${NC}"
-    echo -e "  ${CYAN}${BOLD}│${NC}     ${DIM}v.${VERSION}${NC}  ${DIM}│${NC}  ${DIM}${HOST_COUNT} hosts${NC}  ${DIM}│${NC}  ${DIM}${NOW}${NC}                          ${CYAN}${BOLD}│${NC}"
-    echo -e "  ${CYAN}${BOLD}│${NC}                                                                 ${CYAN}${BOLD}│${NC}"
-    echo -e "  ${CYAN}${BOLD}└─────────────────────────────────────────────────────────────────┘${NC}"
+    echo -e "  ${CYAN}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo ""
+    echo -e "     ${WHITE}${BOLD}⚡  A T O M A T O R${NC}"
+    echo -e "     ${DIM}Remote Xubuntu Management System${NC}"
+    echo ""
+    echo -e "     ${DIM}v.${VERSION}  |  ${HOST_COUNT} hosts  |  ${NOW}${NC}"
+    echo ""
+    echo -e "  ${CYAN}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
     echo ""
 }
 
 show_divider() {
-    echo -e "  ${DIM}─────────────────────────────────────────────────────────────────${NC}"
+    echo -e "  ${DIM}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 }
 
 show_section() {
     echo -e "  ${CYAN}${BOLD}  $1${NC}"
+}
+
+show_subsection() {
+    echo -e "  ${DIM}  -- $1 --${NC}"
 }
 
 show_item() {
@@ -86,7 +89,7 @@ view_latest() {
     show_header
     LATEST=$(ls -1t $1 2>/dev/null | head -1)
     if [ -n "$LATEST" ]; then
-        echo -e "  ${GREEN}${BOLD}📄 Latest:${NC} $LATEST"
+        echo -e "  ${GREEN}${BOLD}Latest:${NC} $LATEST"
         echo ""
         show_divider
         echo ""
@@ -105,17 +108,15 @@ menu_updates() {
         show_header
         show_section "SYSTEM UPDATES & MAINTENANCE"
         echo ""
-        echo -e "  ${DIM}  ┌─ Updates ─────────────────────────────────────────────────┐${NC}"
+        show_subsection "Updates"
         show_item "1" "🔄" "Update all systems" "apt update + upgrade"
         show_item "2" "🧹" "Update + purge kernels" "frees disk space"
         show_item "3" "🚫" "Disable auto updates" "stops unattended-upgrades"
-        echo -e "  ${DIM}  └─────────────────────────────────────────────────────────────┘${NC}"
         echo ""
-        echo -e "  ${DIM}  ┌─ Maintenance ──────────────────────────────────────────────┐${NC}"
+        show_subsection "Maintenance"
         show_item "4" "🗑️" " System cleanup" "cache, logs, trash"
         show_item "5" "♻️" " Reboot all hosts" "restart machines"
         show_item "6" "⏹️" " Shutdown all hosts" "power off machines"
-        echo -e "  ${DIM}  └─────────────────────────────────────────────────────────────┘${NC}"
         show_back
         show_prompt
         read c
@@ -138,25 +139,22 @@ menu_network() {
         show_header
         show_section "NETWORK"
         echo ""
-        echo -e "  ${DIM}  ┌─ Status & Wake ──────────────────────────────────────────┐${NC}"
+        show_subsection "Status & Wake"
         show_item "1" "📡" "Check host status" "ping all hosts"
         show_item "2" "⚡" "Wake-on-LAN" "wake up computers"
         show_item "3" "🔍" "Collect MAC addresses" "gather for WOL"
         show_item "4" "📋" "View MAC addresses" "show collected"
-        echo -e "  ${DIM}  └─────────────────────────────────────────────────────────────┘${NC}"
         echo ""
-        echo -e "  ${DIM}  ┌─ DNS & IP ─────────────────────────────────────────────────┐${NC}"
+        show_subsection "DNS & IP"
         show_item "5" "🌐" "Change DNS servers" "Cloudflare/Google/custom"
         show_item "6" "📌" "Fix static IP" "gateway + hostname digits"
         show_item "7" "📶" "Disable WiFi" "permanent, all hosts"
-        echo -e "  ${DIM}  └─────────────────────────────────────────────────────────────┘${NC}"
         echo ""
-        echo -e "  ${DIM}  ┌─ Security & Testing ───────────────────────────────────────┐${NC}"
+        show_subsection "Security & Testing"
         show_item "8" "🔒" "Remove VPN + reset network" "clean VPN, set static"
         show_item "9" "🛡️" " Lock network settings" "require sudo"
         show_item "10" "🚀" "Speed test all hosts" "run speedtest-cli"
         show_item "11" "📊" "View latest speed test" "show recent results"
-        echo -e "  ${DIM}  └─────────────────────────────────────────────────────────────┘${NC}"
         show_back
         show_prompt
         read c
@@ -165,10 +163,8 @@ menu_network() {
             1)  run_script "check_hosts.sh" "Check Host Status" ;;
             2)  run_script "wol_all.sh" "Wake-on-LAN" ;;
             3)  run_script "collect_mac_addresses.sh" "Collect MAC Addresses" ;;
-            4)  show_header
-                echo -e "  ${GREEN}${BOLD}📋 MAC Addresses:${NC}"
-                echo ""
-                if [ -f "./mac_addresses.txt" ]; then cat ./mac_addresses.txt; else echo -e "  ${RED}No MAC addresses collected yet. Run option 3 first.${NC}"; fi
+            4)  show_header; echo -e "  ${GREEN}${BOLD}MAC Addresses:${NC}"; echo ""
+                if [ -f "./mac_addresses.txt" ]; then cat ./mac_addresses.txt; else echo -e "  ${RED}No MAC addresses collected yet.${NC}"; fi
                 pause ;;
             5)  run_script "change_dns.sh" "Change DNS Servers" ;;
             6)  run_script "fix_static_ip.sh" "Fix Static IP" ;;
@@ -188,7 +184,6 @@ menu_info() {
         show_header
         show_section "INFORMATION & REPORTS"
         echo ""
-        echo -e "  ${DIM}  ┌─ Collect & View ─────────────────────────────────────────┐${NC}"
         show_item "1" "🖥️" " Hardware info" "CPU, RAM, disk, model"
         show_item "2" "📄" "View hardware report" "show latest"
         show_item "3" "💾" "RAM info" "detailed memory"
@@ -199,7 +194,6 @@ menu_info() {
         show_item "8" "📄" "View uptime report" "show latest"
         show_item "9" "⚙️" " Services" "SSH, NM, cron"
         show_item "10" "📄" "View services report" "show latest"
-        echo -e "  ${DIM}  └─────────────────────────────────────────────────────────────┘${NC}"
         show_back
         show_prompt
         read c
@@ -226,7 +220,7 @@ menu_software() {
         show_header
         show_section "SOFTWARE"
         echo ""
-        echo -e "  ${DIM}  ┌─ Install ──────────────────────────────────────────────────┐${NC}"
+        show_subsection "Install"
         show_item "1" "🦊" "Firefox" "default ESR browser"
         show_item "2" "🌍" "Google Chrome" "official browser"
         show_item "3" "💠" "Chromium" "open-source Chrome"
@@ -235,9 +229,8 @@ menu_software() {
         show_item "6" "🌅" "Redshift" "screen color temp"
         show_item "7" "📌" "Xpad" "sticky notes"
         show_item "8" "🏷️" " Hostname display" "conky overlay"
-        echo -e "  ${DIM}  └─────────────────────────────────────────────────────────────┘${NC}"
         echo ""
-        echo -e "  ${DIM}  ┌─ Remove ───────────────────────────────────────────────────┐${NC}"
+        show_subsection "Remove"
         show_item "9" "❌" "Firefox" ""
         show_item "10" "❌" "Google Chrome" ""
         show_item "11" "❌" "Chromium" ""
@@ -245,11 +238,9 @@ menu_software() {
         show_item "13" "❌" "Simplenote" ""
         show_item "14" "❌" "Redshift" ""
         show_item "15" "❌" "Xpad" ""
-        echo -e "  ${DIM}  └─────────────────────────────────────────────────────────────┘${NC}"
         echo ""
-        echo -e "  ${DIM}  ┌─ Fix ──────────────────────────────────────────────────────┐${NC}"
+        show_subsection "Fix"
         show_item "16" "🔧" "Fix hostname display" "repair/restart conky"
-        echo -e "  ${DIM}  └─────────────────────────────────────────────────────────────┘${NC}"
         show_back
         show_prompt
         read c
@@ -282,11 +273,9 @@ menu_config() {
         show_header
         show_section "CONFIGURATION"
         echo ""
-        echo -e "  ${DIM}  ┌─────────────────────────────────────────────────────────────┐${NC}"
         show_item "1" "🎨" "Set wallpaper" "random from list"
         show_item "2" "🖼️" " Manage wallpaper URLs" "add, remove, view"
         show_item "3" "⚙️" " Restrict Chromium CPU" "limit to 50%"
-        echo -e "  ${DIM}  └─────────────────────────────────────────────────────────────┘${NC}"
         show_back
         show_prompt
         read c
@@ -306,15 +295,13 @@ menu_tools() {
         show_header
         show_section "TOOLS"
         echo ""
-        echo -e "  ${DIM}  ┌─ Remote ───────────────────────────────────────────────────┐${NC}"
+        show_subsection "Remote"
         show_item "1" "💻" "Run custom command" "execute on all hosts"
         show_item "2" "🔑" "Change remote password" "update SSH password"
-        echo -e "  ${DIM}  └─────────────────────────────────────────────────────────────┘${NC}"
         echo ""
-        echo -e "  ${DIM}  ┌─ Fix ──────────────────────────────────────────────────────┐${NC}"
+        show_subsection "Fix"
         show_item "3" "🗝️" " Delete SSH keys" "clean local keys"
         show_item "4" "🐌" "Fix slow sudo" "hostname in /etc/hosts"
-        echo -e "  ${DIM}  └─────────────────────────────────────────────────────────────┘${NC}"
         show_back
         show_prompt
         read c
@@ -335,33 +322,23 @@ menu_files() {
         show_header
         show_section "FILE MANAGEMENT"
         echo ""
-        echo -e "  ${DIM}  ┌─────────────────────────────────────────────────────────────┐${NC}"
         show_item "1" "📋" "Manage hosts.txt" "add, remove, ranges"
         show_item "2" "👁️" " View hosts.txt" "display host list"
         show_item "3" "✏️" " Edit hosts.txt" "open in editor"
         show_item "4" "📖" "View README" "project documentation"
-        echo -e "  ${DIM}  └─────────────────────────────────────────────────────────────┘${NC}"
         show_back
         show_prompt
         read c
         log_action "SUBMENU files: choice=$c"
         case $c in
             1) run_script "manage_hosts.sh" "Manage hosts.txt" ;;
-            2)
-                show_header
-                echo -e "  ${GREEN}${BOLD}📋 Contents of hosts.txt:${NC}"
-                echo ""
+            2)  show_header; echo -e "  ${GREEN}${BOLD}Contents of hosts.txt:${NC}"; echo ""
                 if [ -f "./hosts.txt" ]; then cat -n ./hosts.txt; else echo -e "  ${RED}hosts.txt not found!${NC}"; fi
-                pause
-                ;;
-            3)
-                show_header
-                if [ -f "./hosts.txt" ]; then ${EDITOR:-nano} ./hosts.txt; else echo -e "  ${RED}hosts.txt not found!${NC}"; pause; fi
-                ;;
-            4)
-                show_header
-                if [ -f "./README.md" ]; then less ./README.md; else echo -e "  ${RED}README.md not found!${NC}"; pause; fi
-                ;;
+                pause ;;
+            3)  show_header
+                if [ -f "./hosts.txt" ]; then ${EDITOR:-nano} ./hosts.txt; else echo -e "  ${RED}hosts.txt not found!${NC}"; pause; fi ;;
+            4)  show_header
+                if [ -f "./README.md" ]; then less ./README.md; else echo -e "  ${RED}README.md not found!${NC}"; pause; fi ;;
             0) break ;;
             *) echo -e "  ${RED}Invalid.${NC}"; sleep 1 ;;
         esac
@@ -370,7 +347,7 @@ menu_files() {
 
 while true; do
     show_header
-    echo -e "  ${DIM}  ┌─ Main Menu ────────────────────────────────────────────────┐${NC}"
+    show_subsection "Main Menu"
     show_item "1" "🔄" "System Updates" "update, reboot, cleanup"
     show_item "2" "🌐" "Network" "status, DNS, speed test"
     show_item "3" "📊" "Information & Reports" "hardware, disk, uptime"
@@ -379,7 +356,6 @@ while true; do
     show_item "6" "🛠️" " Tools" "remote commands, passwords"
     show_item "7" "📁" "File Management" "hosts.txt, README"
     show_item "8" "⬆️" " Update Scripts" "check for new version"
-    echo -e "  ${DIM}  └─────────────────────────────────────────────────────────────┘${NC}"
     show_exit
     show_prompt
     read choice
@@ -406,21 +382,19 @@ while true; do
             log_action "MENU: 666 Watchdog Controls"
             while true; do
                 show_header
-                echo -e "  ${MAGENTA}${BOLD}┌─────────────────────────────────────────────────────────────────┐${NC}"
-                echo -e "  ${MAGENTA}${BOLD}│${NC}     ${MAGENTA}${BOLD}🛡️  Security Watchdog Controls${NC}                              ${MAGENTA}${BOLD}│${NC}"
-                echo -e "  ${MAGENTA}${BOLD}└─────────────────────────────────────────────────────────────────┘${NC}"
+                echo -e "  ${MAGENTA}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+                echo -e "     ${MAGENTA}${BOLD}🛡️  Security Watchdog Controls${NC}"
+                echo -e "  ${MAGENTA}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
                 echo ""
-                echo -e "  ${DIM}  ┌─ Hosts (hosts.txt + credentials.conf) ───────────────────┐${NC}"
+                show_subsection "Hosts (hosts.txt + credentials.conf)"
                 show_item "1" "📥" "Install watchdog" "72h timeout if offline"
                 show_item "2" "🗑️" " Remove watchdog" ""
                 show_item "3" "📡" "Check watchdog status" ""
                 show_item "4" "🎯" "Change ping hosts" ""
                 show_item "5" "⏱️" " Change timer" "default 72h"
-                echo -e "  ${DIM}  └─────────────────────────────────────────────────────────────┘${NC}"
                 echo ""
-                echo -e "  ${DIM}  ┌─ Additional server (prompts for credentials) ─────────────┐${NC}"
+                show_subsection "Additional server (prompts for credentials)"
                 show_item "6" "🖥️" " Install on extra server" "ad-hoc install"
-                echo -e "  ${DIM}  └─────────────────────────────────────────────────────────────┘${NC}"
                 show_back
                 show_prompt
                 read wc
