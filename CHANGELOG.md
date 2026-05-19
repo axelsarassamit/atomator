@@ -105,3 +105,59 @@
 
 ## v.02.07.04
 - Fix hostname display: proper restart without reboot - removes autostart first, force kills all conky, verifies dead, then starts fresh
+
+## v.02.08.00
+- Minor changes and improvement: all scripts now run in parallel (configurable via MAX_PARALLEL, default 5-10)
+- Significantly faster execution on large host fleets (up to 10x speedup)
+- Added elapsed time display to all scripts
+- Added progress counter showing [current/total] during execution
+- Added ServerAliveInterval to prevent SSH timeouts on slow connections
+- Reboot and shutdown now fire commands in parallel (instant dispatch)
+- Consistent OK/FAIL result summary across all scripts
+- Temp files cleaned up automatically via trap on exit
+
+## v.02.08.01
+- Complete UI redesign of menu system
+- Modern TUI with Unicode box drawing characters (┌─┐│└─┘)
+- Added emoji icons to all menu items for quick visual scanning
+- New branded header with ⚡ ATOMATOR title, version, host count, and clock
+- Grouped sections with labeled box borders
+- Cyan ❯ prompt replaces plain "Choice:" text
+- Dim descriptions next to each menu item
+- Power icon (⏻) for exit, arrow (◄) for back navigation
+- Cleaner helper functions: show_item, show_section, show_divider
+
+## v.02.08.02
+- Rewrote update mechanism to download individual files from GitHub
+- No longer depends on monolithic quick_install.sh for updates
+- Auto-detects all .sh files in repo and downloads them
+- Shows progress [1/40] for each file during update
+- Preserves config files (hosts.txt, credentials.conf, etc.)
+- Version check compares local version.txt against GitHub version.txt
+- Revert option still uses local update_v*.sh installers
+
+## v.02.08.03
+- Fixed update.sh: uses raw.githubusercontent.com instead of API to avoid rate limits
+- Added fallback file list when API is unavailable
+- Added validation to reject error responses as downloaded files
+- Pushed all missing scripts to GitHub (install_server_watchdog.sh, change_watchdog_timer.sh)
+- All 60 .sh files now confirmed present on GitHub
+- Updated quick_install.sh VERSION to match
+
+## v.02.09.00
+- Major feature release with 7 new scripts, expanded menus, and fleet management improvements
+- New: system_info_summary.sh - fleet health dashboard (total RAM, disk warnings, uptime stats)
+- New: check_internet.sh - verify each host can reach the internet (HTTP + ping test)
+- New: install_package.sh - install any apt package by name on all hosts
+- New: copy_file_to_all.sh - SCP a file to the same path on every host
+- New: lock_screens.sh - lock all screens instantly
+- New: send_message.sh - send a popup notification to all desktops
+- New: view_log.sh - show last 30 menu actions from debug.log
+- Information & Reports menu expanded to 11 options (added fleet summary)
+- Network menu expanded to 12 options (added internet check)
+- Software menu expanded to 17 options (added package installer)
+- Tools menu expanded to 7 options (added copy file, lock screens, send message)
+- File Management expanded to 5 options (added view log)
+- Complete documentation overhaul: fixed script counts, reorganized sections, updated file structure
+- Rewrote update mechanism docs for GitHub file-by-file system
+- All version references now consistent across quick_install.sh, README, and CHANGELOG

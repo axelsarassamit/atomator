@@ -6,7 +6,7 @@
 # Run on your Debian server: sudo bash quick_install.sh
 # ============================================================================
 
-VERSION="02.07.04"
+VERSION="02.09.00"
 
 set -e
 
@@ -95,16 +95,44 @@ source ./credentials.conf 2>/dev/null || { echo "ERROR: credentials.conf not fou
 echo "=== Update All Systems ==="
 echo "Runs apt update, upgrade, autoremove and autoclean on all hosts."
 echo ""
-for host in $(grep -v "^#" hosts.txt | grep -v "^$"); do
-    echo "[$host] Updating..."
-    sshpass -p "$SSH_PASS" ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$SSH_USER"@"$host" \
-        'echo '"$SSH_PASS"' | sudo -S bash -c "DEBIAN_FRONTEND=noninteractive apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get upgrade -y -o Dpkg::Options::=--force-confold && DEBIAN_FRONTEND=noninteractive apt-get autoremove -y && apt-get autoclean -y"' 2>&1 && echo "[$host] OK" || echo "[$host] FAILED"
+START_TIME=$(date +%s)
+MAX_JOBS=${MAX_PARALLEL:-5}
+HOSTS=($(grep -v "^#" hosts.txt | grep -v "^$"))
+TOTAL=${#HOSTS[@]}
+OK_COUNT=0; FAIL_COUNT=0
+TMPDIR=$(mktemp -d)
+trap "rm -rf $TMPDIR" EXIT
+
+run_update() {
+    local host="$1" idx="$2"
+    sshpass -p "$SSH_PASS" ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 -o ServerAliveInterval=30 "$SSH_USER"@"$host" \
+        'echo '"$SSH_PASS"' | sudo -S bash -c "DEBIAN_FRONTEND=noninteractive apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get upgrade -y -o Dpkg::Options::=--force-confold && DEBIAN_FRONTEND=noninteractive apt-get autoremove -y && apt-get autoclean -y"' &>/dev/null
+    [ $? -eq 0 ] && echo "OK" > "$TMPDIR/$idx" || echo "FAIL" > "$TMPDIR/$idx"
+}
+
+for i in "${!HOSTS[@]}"; do
+    run_update "${HOSTS[$i]}" "$i" &
+    echo "[$((i+1))/$TOTAL] ${HOSTS[$i]} - started"
+    while [ $(jobs -r | wc -l) -ge $MAX_JOBS ]; do sleep 0.5; done
 done
+wait
+
+for i in "${!HOSTS[@]}"; do
+    if [ -f "$TMPDIR/$i" ] && grep -q "OK" "$TMPDIR/$i"; then
+        echo -e "  \033[0;32m[OK]\033[0m     ${HOSTS[$i]}"
+        OK_COUNT=$((OK_COUNT + 1))
+    else
+        echo -e "  \033[0;31m[FAILED]\033[0m ${HOSTS[$i]}"
+        FAIL_COUNT=$((FAIL_COUNT + 1))
+    fi
+done
+
+ELAPSED=$(( $(date +%s) - START_TIME ))
 echo ""
-echo "Done."
+echo "Done in ${ELAPSED}s | OK: $OK_COUNT | Failed: $FAIL_COUNT | Total: $TOTAL"
 EOF
 chmod +x update_all.sh
-echo "  [1/49] update_all.sh"
+echo "  [1/51] update_all.sh"
 
 # ============================================================================
 # 2. update_and_remove_all.sh
@@ -116,16 +144,44 @@ source ./credentials.conf 2>/dev/null || { echo "ERROR: credentials.conf not fou
 echo "=== Update & Remove Old Kernels ==="
 echo "Updates all systems and purges old kernel packages to free disk space."
 echo ""
-for host in $(grep -v "^#" hosts.txt | grep -v "^$"); do
-    echo "[$host] Updating + purging old kernels..."
-    sshpass -p "$SSH_PASS" ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$SSH_USER"@"$host" \
-        'echo '"$SSH_PASS"' | sudo -S bash -c "DEBIAN_FRONTEND=noninteractive apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get upgrade -y -o Dpkg::Options::=--force-confold && DEBIAN_FRONTEND=noninteractive apt-get autoremove -y --purge && apt-get autoclean -y"' 2>&1 && echo "[$host] OK" || echo "[$host] FAILED"
+START_TIME=$(date +%s)
+MAX_JOBS=${MAX_PARALLEL:-5}
+HOSTS=($(grep -v "^#" hosts.txt | grep -v "^$"))
+TOTAL=${#HOSTS[@]}
+OK_COUNT=0; FAIL_COUNT=0
+TMPDIR=$(mktemp -d)
+trap "rm -rf $TMPDIR" EXIT
+
+run_host() {
+    local host="$1" idx="$2"
+    sshpass -p "$SSH_PASS" ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 -o ServerAliveInterval=30 "$SSH_USER"@"$host" \
+        'echo '"$SSH_PASS"' | sudo -S bash -c "DEBIAN_FRONTEND=noninteractive apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get upgrade -y -o Dpkg::Options::=--force-confold && DEBIAN_FRONTEND=noninteractive apt-get autoremove -y --purge && apt-get autoclean -y"' &>/dev/null
+    [ $? -eq 0 ] && echo "OK" > "$TMPDIR/$idx" || echo "FAIL" > "$TMPDIR/$idx"
+}
+
+for i in "${!HOSTS[@]}"; do
+    run_host "${HOSTS[$i]}" "$i" &
+    echo "[$((i+1))/$TOTAL] ${HOSTS[$i]} - started"
+    while [ $(jobs -r | wc -l) -ge $MAX_JOBS ]; do sleep 0.5; done
 done
+wait
+
+for i in "${!HOSTS[@]}"; do
+    if [ -f "$TMPDIR/$i" ] && grep -q "OK" "$TMPDIR/$i"; then
+        echo -e "  \033[0;32m[OK]\033[0m     ${HOSTS[$i]}"
+        OK_COUNT=$((OK_COUNT + 1))
+    else
+        echo -e "  \033[0;31m[FAILED]\033[0m ${HOSTS[$i]}"
+        FAIL_COUNT=$((FAIL_COUNT + 1))
+    fi
+done
+
+ELAPSED=$(( $(date +%s) - START_TIME ))
 echo ""
-echo "Done."
+echo "Done in ${ELAPSED}s | OK: $OK_COUNT | Failed: $FAIL_COUNT | Total: $TOTAL"
 EOF
 chmod +x update_and_remove_all.sh
-echo "  [2/49] update_and_remove_all.sh"
+echo "  [2/51] update_and_remove_all.sh"
 
 # ============================================================================
 # 3. disable_auto_updates.sh
@@ -137,9 +193,17 @@ source ./credentials.conf 2>/dev/null || { echo "ERROR: credentials.conf not fou
 echo "=== Disable Automatic Updates ==="
 echo "Stops and disables unattended-upgrades and apt timers on all hosts."
 echo ""
-for host in $(grep -v "^#" hosts.txt | grep -v "^$"); do
-    echo "[$host] Disabling auto-updates..."
-    sshpass -p "$SSH_PASS" ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$SSH_USER"@"$host" \
+START_TIME=$(date +%s)
+MAX_JOBS=${MAX_PARALLEL:-5}
+HOSTS=($(grep -v "^#" hosts.txt | grep -v "^$"))
+TOTAL=${#HOSTS[@]}
+OK_COUNT=0; FAIL_COUNT=0
+TMPDIR=$(mktemp -d)
+trap "rm -rf $TMPDIR" EXIT
+
+run_host() {
+    local host="$1" idx="$2"
+    sshpass -p "$SSH_PASS" ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 -o ServerAliveInterval=30 "$SSH_USER"@"$host" \
         'echo '"$SSH_PASS"' | sudo -S bash -c "
         systemctl stop unattended-upgrades 2>/dev/null || true
         systemctl disable unattended-upgrades 2>/dev/null || true
@@ -148,18 +212,34 @@ for host in $(grep -v "^#" hosts.txt | grep -v "^$"); do
         systemctl stop apt-daily-upgrade.timer 2>/dev/null || true
         systemctl disable apt-daily-upgrade.timer 2>/dev/null || true
         DEBIAN_FRONTEND=noninteractive apt-get remove -y unattended-upgrades 2>/dev/null || true
-        echo \"APT::Periodic::Update-Package-Lists \\\"0\\\";\" > /etc/apt/apt.conf.d/20auto-upgrades
-        echo \"APT::Periodic::Unattended-Upgrade \\\"0\\\";\" >> /etc/apt/apt.conf.d/20auto-upgrades
-        echo \"APT::Periodic::Download-Upgradeable-Packages \\\"0\\\";\" >> /etc/apt/apt.conf.d/20auto-upgrades
-        echo \"APT::Periodic::AutocleanInterval \\\"0\\\";\" >> /etc/apt/apt.conf.d/20auto-upgrades
-        echo \"Done\"
-    "' 2>&1 && echo "[$host] OK" || echo "[$host] FAILED"
+        printf \"APT::Periodic::Update-Package-Lists \\\"0\\\";\\nAPT::Periodic::Unattended-Upgrade \\\"0\\\";\\nAPT::Periodic::Download-Upgradeable-Packages \\\"0\\\";\\nAPT::Periodic::AutocleanInterval \\\"0\\\";\\n\" > /etc/apt/apt.conf.d/20auto-upgrades
+    "' &>/dev/null
+    [ $? -eq 0 ] && echo "OK" > "$TMPDIR/$idx" || echo "FAIL" > "$TMPDIR/$idx"
+}
+
+for i in "${!HOSTS[@]}"; do
+    run_host "${HOSTS[$i]}" "$i" &
+    echo "[$((i+1))/$TOTAL] ${HOSTS[$i]} - started"
+    while [ $(jobs -r | wc -l) -ge $MAX_JOBS ]; do sleep 0.5; done
 done
+wait
+
+for i in "${!HOSTS[@]}"; do
+    if [ -f "$TMPDIR/$i" ] && grep -q "OK" "$TMPDIR/$i"; then
+        echo -e "  \033[0;32m[OK]\033[0m     ${HOSTS[$i]}"
+        OK_COUNT=$((OK_COUNT + 1))
+    else
+        echo -e "  \033[0;31m[FAILED]\033[0m ${HOSTS[$i]}"
+        FAIL_COUNT=$((FAIL_COUNT + 1))
+    fi
+done
+
+ELAPSED=$(( $(date +%s) - START_TIME ))
 echo ""
-echo "Done."
+echo "Done in ${ELAPSED}s | OK: $OK_COUNT | Failed: $FAIL_COUNT | Total: $TOTAL"
 EOF
 chmod +x disable_auto_updates.sh
-echo "  [3/49] disable_auto_updates.sh"
+echo "  [3/51] disable_auto_updates.sh"
 
 # ============================================================================
 # 4. cleanup_all.sh
@@ -171,9 +251,17 @@ source ./credentials.conf 2>/dev/null || { echo "ERROR: credentials.conf not fou
 echo "=== System Cleanup ==="
 echo "Cleans APT cache, old logs, temp files and trash on all hosts."
 echo ""
-for host in $(grep -v "^#" hosts.txt | grep -v "^$"); do
-    echo "[$host] Cleaning up..."
-    sshpass -p "$SSH_PASS" ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$SSH_USER"@"$host" \
+START_TIME=$(date +%s)
+MAX_JOBS=${MAX_PARALLEL:-5}
+HOSTS=($(grep -v "^#" hosts.txt | grep -v "^$"))
+TOTAL=${#HOSTS[@]}
+OK_COUNT=0; FAIL_COUNT=0
+TMPDIR=$(mktemp -d)
+trap "rm -rf $TMPDIR" EXIT
+
+run_host() {
+    local host="$1" idx="$2"
+    sshpass -p "$SSH_PASS" ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 -o ServerAliveInterval=30 "$SSH_USER"@"$host" \
         'echo '"$SSH_PASS"' | sudo -S bash -c "
         apt-get clean -y
         apt-get autoclean -y
@@ -184,14 +272,33 @@ for host in $(grep -v "^#" hosts.txt | grep -v "^$"); do
         rm -rf /home/*/.local/share/Trash/files/* 2>/dev/null || true
         rm -rf /home/*/.local/share/Trash/info/* 2>/dev/null || true
         rm -rf /home/*/.cache/thumbnails/* 2>/dev/null || true
-        echo \"Done\"
-    "' 2>&1 && echo "[$host] OK" || echo "[$host] FAILED"
+    "' &>/dev/null
+    [ $? -eq 0 ] && echo "OK" > "$TMPDIR/$idx" || echo "FAIL" > "$TMPDIR/$idx"
+}
+
+for i in "${!HOSTS[@]}"; do
+    run_host "${HOSTS[$i]}" "$i" &
+    echo "[$((i+1))/$TOTAL] ${HOSTS[$i]} - started"
+    while [ $(jobs -r | wc -l) -ge $MAX_JOBS ]; do sleep 0.5; done
 done
+wait
+
+for i in "${!HOSTS[@]}"; do
+    if [ -f "$TMPDIR/$i" ] && grep -q "OK" "$TMPDIR/$i"; then
+        echo -e "  \033[0;32m[OK]\033[0m     ${HOSTS[$i]}"
+        OK_COUNT=$((OK_COUNT + 1))
+    else
+        echo -e "  \033[0;31m[FAILED]\033[0m ${HOSTS[$i]}"
+        FAIL_COUNT=$((FAIL_COUNT + 1))
+    fi
+done
+
+ELAPSED=$(( $(date +%s) - START_TIME ))
 echo ""
-echo "Done."
+echo "Done in ${ELAPSED}s | OK: $OK_COUNT | Failed: $FAIL_COUNT | Total: $TOTAL"
 EOF
 chmod +x cleanup_all.sh
-echo "  [4/49] cleanup_all.sh"
+echo "  [4/51] cleanup_all.sh"
 
 # ============================================================================
 # 5. reboot.sh
@@ -214,7 +321,7 @@ echo ""
 echo "Reboot command sent to all hosts."
 EOF
 chmod +x reboot.sh
-echo "  [5/49] reboot.sh"
+echo "  [5/51] reboot.sh"
 
 # ============================================================================
 # 6. shutdown_all.sh
@@ -237,7 +344,7 @@ echo ""
 echo "Shutdown command sent to all hosts."
 EOF
 chmod +x shutdown_all.sh
-echo "  [6/49] shutdown_all.sh"
+echo "  [6/51] shutdown_all.sh"
 
 # ============================================================================
 # 7. check_hosts.sh
@@ -266,7 +373,7 @@ echo ""
 echo "Total: $TOTAL | Online: $ONLINE | Offline: $OFFLINE"
 EOF
 chmod +x check_hosts.sh
-echo "  [7/49] check_hosts.sh"
+echo "  [7/51] check_hosts.sh"
 
 # ============================================================================
 # 8. wol_all.sh (no credentials needed - uses mac_addresses.txt)
@@ -292,7 +399,7 @@ echo ""
 echo "WOL packets sent (3x per host). Wait 30-60s then check status."
 EOF
 chmod +x wol_all.sh
-echo "  [8/49] wol_all.sh"
+echo "  [8/51] wol_all.sh"
 
 # ============================================================================
 # 9. collect_mac_addresses.sh
@@ -321,7 +428,7 @@ echo ""
 echo "Saved to: $OUTPUT_FILE"
 EOF
 chmod +x collect_mac_addresses.sh
-echo "  [9/49] collect_mac_addresses.sh"
+echo "  [9/51] collect_mac_addresses.sh"
 
 # ============================================================================
 # 10. change_dns.sh
@@ -370,7 +477,7 @@ echo ""
 echo "Done."
 EOF
 chmod +x change_dns.sh
-echo "  [10/49] change_dns.sh"
+echo "  [10/51] change_dns.sh"
 
 # ============================================================================
 # 11. fix_static_ip.sh
@@ -442,7 +549,7 @@ echo ""
 echo "Done."
 EOF
 chmod +x fix_static_ip.sh
-echo "  [11/49] fix_static_ip.sh"
+echo "  [11/51] fix_static_ip.sh"
 
 # ============================================================================
 # 12. remove_vpn_reset_network.sh
@@ -481,7 +588,7 @@ echo ""
 echo "Done."
 EOF
 chmod +x remove_vpn_reset_network.sh
-echo "  [12/49] remove_vpn_reset_network.sh"
+echo "  [12/51] remove_vpn_reset_network.sh"
 
 # ============================================================================
 # 13. require_sudo_network.sh
@@ -513,7 +620,7 @@ echo ""
 echo "Done."
 EOF
 chmod +x require_sudo_network.sh
-echo "  [13/49] require_sudo_network.sh"
+echo "  [13/51] require_sudo_network.sh"
 
 # ============================================================================
 # 14. speedtest_all.sh
@@ -574,7 +681,7 @@ echo "Online: $ONLINE | Offline: $OFFLINE"
 echo "Saved to: $OUTPUT_FILE"
 EOF
 chmod +x speedtest_all.sh
-echo "  [14/49] speedtest_all.sh"
+echo "  [14/51] speedtest_all.sh"
 
 # ============================================================================
 # 15. disable_wifi.sh
@@ -625,7 +732,7 @@ echo ""
 echo "Done."
 EOF
 chmod +x disable_wifi.sh
-echo "  [15/49] disable_wifi.sh"
+echo "  [15/51] disable_wifi.sh"
 
 # ============================================================================
 # 16. collect_hardware_info.sh
@@ -692,7 +799,7 @@ echo "Online: $ONLINE | Offline: $OFFLINE"
 echo "Saved to: $OUTPUT_FILE"
 EOF
 chmod +x collect_hardware_info.sh
-echo "  [16/49] collect_hardware_info.sh"
+echo "  [16/51] collect_hardware_info.sh"
 
 # ============================================================================
 # 17. collect_ram_info.sh
@@ -742,7 +849,7 @@ echo "$SUMMARY"
 echo "Saved to: $OUTPUT_FILE"
 EOF
 chmod +x collect_ram_info.sh
-echo "  [17/49] collect_ram_info.sh"
+echo "  [17/51] collect_ram_info.sh"
 
 # ============================================================================
 # 18. check_disk_space.sh
@@ -793,7 +900,7 @@ echo "Online: $ONLINE | Offline: $OFFLINE"
 echo "Saved to: $OUTPUT_FILE"
 EOF
 chmod +x check_disk_space.sh
-echo "  [18/49] check_disk_space.sh"
+echo "  [18/51] check_disk_space.sh"
 
 # ============================================================================
 # 19-20. install/uninstall_firefox.sh
@@ -825,7 +932,7 @@ echo ""
 echo "Done."
 EOF
 chmod +x install_firefox.sh
-echo "  [19/49] install_firefox.sh"
+echo "  [19/51] install_firefox.sh"
 
 cat > uninstall_firefox.sh << 'EOF'
 #!/bin/bash
@@ -848,7 +955,7 @@ echo ""
 echo "Done."
 EOF
 chmod +x uninstall_firefox.sh
-echo "  [20/49] uninstall_firefox.sh"
+echo "  [20/51] uninstall_firefox.sh"
 
 # ============================================================================
 # 21. install_hostname_display.sh
@@ -940,7 +1047,7 @@ echo ""
 echo "Done. Shows after next login/reboot."
 EOF
 chmod +x install_hostname_display.sh
-echo "  [21/49] install_hostname_display.sh"
+echo "  [21/51] install_hostname_display.sh"
 
 # ============================================================================
 # 22. fix_hostname_display.sh
@@ -1058,7 +1165,7 @@ echo ""
 echo "Done. Hostname display has been fixed on all hosts."
 EOF
 chmod +x fix_hostname_display.sh
-echo "  [22/49] fix_hostname_display.sh"
+echo "  [22/51] fix_hostname_display.sh"
 
 # ============================================================================
 # 23-24. install/remove_wine.sh
@@ -1084,7 +1191,7 @@ echo ""
 echo "Done. Run .exe files with: wine program.exe"
 EOF
 chmod +x install_wine.sh
-echo "  [23/49] install_wine.sh"
+echo "  [23/51] install_wine.sh"
 
 cat > remove_wine.sh << 'EOF'
 #!/bin/bash
@@ -1107,7 +1214,7 @@ echo ""
 echo "Done."
 EOF
 chmod +x remove_wine.sh
-echo "  [24/49] remove_wine.sh"
+echo "  [24/51] remove_wine.sh"
 
 # ============================================================================
 # 24. install_simplenote.sh
@@ -1135,7 +1242,7 @@ echo ""
 echo "Done."
 EOF
 chmod +x install_simplenote.sh
-echo "  [25/49] install_simplenote.sh"
+echo "  [25/51] install_simplenote.sh"
 
 # ============================================================================
 # 25. install_redshift.sh
@@ -1173,7 +1280,7 @@ echo ""
 echo "Done. Redshift starts automatically on next login."
 EOF
 chmod +x install_redshift.sh
-echo "  [26/49] install_redshift.sh"
+echo "  [26/51] install_redshift.sh"
 
 # ============================================================================
 # 27. remove_simplenote.sh
@@ -1197,7 +1304,7 @@ echo ""
 echo "Done."
 EOF
 chmod +x remove_simplenote.sh
-echo "  [27/49] remove_simplenote.sh"
+echo "  [27/51] remove_simplenote.sh"
 
 # ============================================================================
 # 28. remove_redshift.sh
@@ -1223,7 +1330,7 @@ echo ""
 echo "Done."
 EOF
 chmod +x remove_redshift.sh
-echo "  [28/49] remove_redshift.sh"
+echo "  [28/51] remove_redshift.sh"
 
 # ============================================================================
 # 29. install_chrome.sh
@@ -1254,7 +1361,7 @@ echo ""
 echo "Done."
 EOF
 chmod +x install_chrome.sh
-echo "  [29/49] install_chrome.sh"
+echo "  [29/51] install_chrome.sh"
 
 # ============================================================================
 # 30. remove_chrome.sh
@@ -1280,7 +1387,7 @@ echo ""
 echo "Done."
 EOF
 chmod +x remove_chrome.sh
-echo "  [30/49] remove_chrome.sh"
+echo "  [30/51] remove_chrome.sh"
 
 # ============================================================================
 # 31. install_chromium.sh
@@ -1305,7 +1412,7 @@ echo ""
 echo "Done."
 EOF
 chmod +x install_chromium.sh
-echo "  [31/49] install_chromium.sh"
+echo "  [31/51] install_chromium.sh"
 
 # ============================================================================
 # 32. remove_chromium.sh
@@ -1331,7 +1438,7 @@ echo ""
 echo "Done."
 EOF
 chmod +x remove_chromium.sh
-echo "  [32/49] remove_chromium.sh"
+echo "  [32/51] remove_chromium.sh"
 
 # ============================================================================
 # 33. install_xpad.sh
@@ -1355,7 +1462,7 @@ echo ""
 echo "Done."
 EOF
 chmod +x install_xpad.sh
-echo "  [33/49] install_xpad.sh"
+echo "  [33/51] install_xpad.sh"
 
 # ============================================================================
 # 34. remove_xpad.sh
@@ -1380,7 +1487,7 @@ echo ""
 echo "Done."
 EOF
 chmod +x remove_xpad.sh
-echo "  [34/49] remove_xpad.sh"
+echo "  [34/51] remove_xpad.sh"
 
 # ============================================================================
 # 35. set_wallpaper.sh
@@ -1420,7 +1527,7 @@ echo ""
 echo "Done."
 EOF
 chmod +x set_wallpaper.sh
-echo "  [35/49] set_wallpaper.sh"
+echo "  [35/51] set_wallpaper.sh"
 
 # ============================================================================
 # 27. restrict_chromium_cpu.sh
@@ -1458,7 +1565,7 @@ echo ""
 echo "Done."
 EOF
 chmod +x restrict_chromium_cpu.sh
-echo "  [36/49] restrict_chromium_cpu.sh"
+echo "  [36/51] restrict_chromium_cpu.sh"
 
 # ============================================================================
 # 28. manage_wallpapers.sh (no credentials needed - local file management)
@@ -1498,7 +1605,7 @@ while true; do
 done
 EOF
 chmod +x manage_wallpapers.sh
-echo "  [37/49] manage_wallpapers.sh"
+echo "  [37/51] manage_wallpapers.sh"
 
 # ============================================================================
 # 29. run_remote_command.sh
@@ -1522,7 +1629,7 @@ done
 echo "Done."
 EOF
 chmod +x run_remote_command.sh
-echo "  [38/49] run_remote_command.sh"
+echo "  [38/51] run_remote_command.sh"
 
 # ============================================================================
 # 30. delete_ssh_keys.sh (no credentials needed - local only)
@@ -1554,7 +1661,7 @@ echo "SSH keys deleted, host keys regenerated."
 echo "Done."
 EOF
 chmod +x delete_ssh_keys.sh
-echo "  [39/49] delete_ssh_keys.sh"
+echo "  [39/51] delete_ssh_keys.sh"
 
 # ============================================================================
 # 31. check_uptime.sh
@@ -1595,7 +1702,7 @@ echo "Online: $ONLINE | Offline: $OFFLINE"
 echo "Saved to: $OUTPUT_FILE"
 EOF
 chmod +x check_uptime.sh
-echo "  [40/49] check_uptime.sh"
+echo "  [40/51] check_uptime.sh"
 
 # ============================================================================
 # 32. check_services.sh
@@ -1645,7 +1752,7 @@ echo "Online: $ONLINE | Offline: $OFFLINE"
 echo "Saved to: $OUTPUT_FILE"
 EOF
 chmod +x check_services.sh
-echo "  [41/49] check_services.sh"
+echo "  [41/51] check_services.sh"
 
 # ============================================================================
 # 31-33. Watchdog scripts
@@ -1768,7 +1875,7 @@ echo ""
 echo "Done."
 EOF
 chmod +x install_connectivity_watchdog.sh
-echo "  [42/49] install_connectivity_watchdog.sh"
+echo "  [42/51] install_connectivity_watchdog.sh"
 
 cat > remove_connectivity_watchdog.sh << 'EOF'
 #!/bin/bash
@@ -1794,7 +1901,7 @@ echo ""
 echo "Done."
 EOF
 chmod +x remove_connectivity_watchdog.sh
-echo "  [43/49] remove_connectivity_watchdog.sh"
+echo "  [43/51] remove_connectivity_watchdog.sh"
 
 cat > check_watchdog_status.sh << 'EOF'
 #!/bin/bash
@@ -1811,7 +1918,7 @@ done
 echo "Done."
 EOF
 chmod +x check_watchdog_status.sh
-echo "  [44/49] check_watchdog_status.sh"
+echo "  [44/51] check_watchdog_status.sh"
 
 # ============================================================================
 # 36. manage_hosts.sh (no credentials needed - local file management)
@@ -1865,7 +1972,7 @@ while true; do
 done
 EOF
 chmod +x manage_hosts.sh
-echo "  [45/49] manage_hosts.sh"
+echo "  [45/51] manage_hosts.sh"
 
 # ============================================================================
 # 37. change_password.sh
@@ -1915,7 +2022,7 @@ echo ""
 echo "Done."
 EOF
 chmod +x change_password.sh
-echo "  [46/49] change_password.sh"
+echo "  [46/51] change_password.sh"
 
 # ============================================================================
 # 38. fix_slow_sudo.sh
@@ -1976,7 +2083,7 @@ echo ""
 echo "Done. Sudo should be fast now."
 EOF
 chmod +x fix_slow_sudo.sh
-echo "  [47/49] fix_slow_sudo.sh"
+echo "  [47/51] fix_slow_sudo.sh"
 
 # ============================================================================
 # 39. configure_watchdog_hosts.sh
@@ -2051,7 +2158,261 @@ SAVECONF
 done
 EOF
 chmod +x configure_watchdog_hosts.sh
-echo "  [48/49] configure_watchdog_hosts.sh"
+echo "  [48/51] configure_watchdog_hosts.sh"
+
+cat > change_watchdog_timer.sh << 'EOF'
+#!/bin/bash
+set +e
+source ./credentials.conf 2>/dev/null || { echo "ERROR: credentials.conf not found!"; exit 1; }
+RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC='\033[0m'
+
+echo -e "${CYAN}=== Change Watchdog Self-Destruct Timer ===${NC}"
+echo ""
+echo "Updates TIMEOUT_SECONDS in /usr/local/bin/connectivity-watchdog.sh on"
+echo "every host in hosts.txt. Default in fresh installs is 72 hours."
+echo ""
+echo "Any in-progress countdown is cleared, so a shorter new timeout will"
+echo "not immediately wipe a host that was already mid-countdown."
+echo ""
+
+read -p "  New timeout in HOURS [1-720, default 72]: " hours
+[ -z "$hours" ] && hours=72
+
+if ! [[ "$hours" =~ ^[0-9]+$ ]] || [ "$hours" -lt 1 ] || [ "$hours" -gt 720 ]; then
+    echo -e "${RED}Invalid input. Must be an integer between 1 and 720.${NC}"
+    exit 1
+fi
+
+NEW_SECONDS=$((hours * 3600))
+
+echo ""
+echo -e "  New timeout: ${YELLOW}${hours}h${NC} (${NEW_SECONDS}s)"
+echo ""
+read -p "  Apply to all hosts in hosts.txt? (yes/no): " confirm
+if [ "$confirm" != "yes" ]; then echo "Cancelled."; exit 0; fi
+echo ""
+
+LOCAL_SCRIPT="/tmp/_change_watchdog_timer.sh"
+REMOTE_SCRIPT="/tmp/_change_watchdog_timer.sh"
+cat > "$LOCAL_SCRIPT" << SCRIPT
+#!/bin/bash
+if [ ! -f /usr/local/bin/connectivity-watchdog.sh ]; then
+    echo MISSING
+    exit 0
+fi
+sed -i 's/^TIMEOUT_SECONDS=.*/TIMEOUT_SECONDS=$NEW_SECONDS/' /usr/local/bin/connectivity-watchdog.sh
+rm -f /var/lib/connectivity-watchdog/state /var/lib/connectivity-watchdog/timer
+echo OK
+SCRIPT
+
+OK_COUNT=0; FAIL_COUNT=0; MISSING_COUNT=0
+for host in $(grep -v "^#" hosts.txt | grep -v "^$"); do
+    echo "[$host] Updating watchdog timer..."
+    sshpass -p "$SSH_PASS" scp -o StrictHostKeyChecking=no "$LOCAL_SCRIPT" "$SSH_USER"@"$host":"$REMOTE_SCRIPT" 2>/dev/null
+    if [ $? -ne 0 ]; then
+        echo -e "[$host] ${RED}FAILED${NC} (scp)"
+        FAIL_COUNT=$((FAIL_COUNT + 1))
+        continue
+    fi
+    OUT=$(sshpass -p "$SSH_PASS" ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$SSH_USER"@"$host" \
+        "echo $SSH_PASS | sudo -S bash $REMOTE_SCRIPT && rm -f $REMOTE_SCRIPT" 2>/dev/null)
+    if echo "$OUT" | grep -q "MISSING"; then
+        echo -e "[$host] ${YELLOW}NOT INSTALLED${NC} (skipped)"
+        MISSING_COUNT=$((MISSING_COUNT + 1))
+    elif echo "$OUT" | grep -q "OK"; then
+        echo -e "[$host] ${GREEN}OK${NC}"
+        OK_COUNT=$((OK_COUNT + 1))
+    else
+        echo -e "[$host] ${RED}FAILED${NC}"
+        FAIL_COUNT=$((FAIL_COUNT + 1))
+    fi
+done
+rm -f "$LOCAL_SCRIPT"
+echo ""
+echo -e "Updated: ${GREEN}${OK_COUNT}${NC}  Failed: ${RED}${FAIL_COUNT}${NC}  Not installed: ${YELLOW}${MISSING_COUNT}${NC}"
+echo "Done."
+EOF
+chmod +x change_watchdog_timer.sh
+echo "  [49/51] change_watchdog_timer.sh"
+
+cat > install_server_watchdog.sh << 'EOF'
+#!/bin/bash
+set +e
+source ./watchdog_hosts.conf 2>/dev/null || { echo "ERROR: watchdog_hosts.conf not found!"; exit 1; }
+
+RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC='\033[0m'
+
+echo -e "${CYAN}=== Install Connectivity Watchdog on Additional Server ===${NC}"
+echo "Ad-hoc install on a server that is NOT in hosts.txt."
+echo "Credentials are entered here and never stored on disk."
+echo ""
+echo "72-hour self-destruct if configured ping hosts are unreachable."
+echo ""
+
+# Prompt for one or more servers
+SERVERS=()
+echo "Enter server hostname(s) or IP(s). Empty line to finish:"
+while true; do
+    read -p "  Server: " s
+    [ -z "$s" ] && break
+    SERVERS+=("$s")
+done
+
+if [ ${#SERVERS[@]} -eq 0 ]; then
+    echo -e "${RED}No servers specified.${NC}"
+    exit 1
+fi
+echo ""
+
+# Prompt for credentials
+read -p "  SSH username [default: root]: " SERVER_USER
+[ -z "$SERVER_USER" ] && SERVER_USER="root"
+read -s -p "  SSH password for ${SERVER_USER}: " SERVER_PASS
+echo ""
+if [ -z "$SERVER_PASS" ]; then
+    echo -e "${RED}Password cannot be empty.${NC}"
+    exit 1
+fi
+echo ""
+
+echo -e "${YELLOW}Watchdog ping targets (from watchdog_hosts.conf):${NC}"
+echo "  Host 1: ${HOST_1:-not set}"
+echo "  Host 2: ${HOST_2:-not set}"
+[ -n "$HOST_3" ] && echo "  Host 3: $HOST_3"
+echo ""
+if [ -z "$HOST_1" ] || [ -z "$HOST_2" ]; then
+    echo -e "${RED}At least HOST_1 and HOST_2 must be set in watchdog_hosts.conf.${NC}"
+    exit 1
+fi
+
+echo -e "${YELLOW}Will install watchdog on:${NC}"
+for s in "${SERVERS[@]}"; do echo "  - ${SERVER_USER}@${s}"; done
+echo ""
+echo -e "${RED}WARNING: This installs a REAL self-destruct mechanism!${NC}"
+echo -e "${RED}If a server loses connectivity for 72h it WIPES ITS DISKS and powers off.${NC}"
+read -p "Type 'yes' to proceed: " confirm
+if [ "$confirm" != "yes" ]; then echo "Cancelled."; unset SERVER_PASS; exit 0; fi
+echo ""
+
+LOCAL_SCRIPT="/tmp/_install_server_watchdog.sh"
+REMOTE_SCRIPT="/tmp/_install_server_watchdog.sh"
+cat > "$LOCAL_SCRIPT" << 'SCRIPT'
+#!/bin/bash
+mkdir -p /var/lib/connectivity-watchdog
+cat > /usr/local/bin/connectivity-watchdog.sh << 'WATCHDOG'
+#!/bin/bash
+PRIMARY_HOST="__HOST_1__"
+SECONDARY_HOST="__HOST_2__"
+TERTIARY_HOST="__HOST_3__"
+TIMEOUT_SECONDS=259200
+STATE_FILE="/var/lib/connectivity-watchdog/state"
+TIMER_FILE="/var/lib/connectivity-watchdog/timer"
+mkdir -p /var/lib/connectivity-watchdog
+check_connectivity() {
+    ping -c 1 -W 2 "$PRIMARY_HOST" &>/dev/null && return 0
+    ping -c 1 -W 2 "$SECONDARY_HOST" &>/dev/null && return 0
+    [ -n "$TERTIARY_HOST" ] && ping -c 1 -W 2 "$TERTIARY_HOST" &>/dev/null && return 0
+    return 1
+}
+perform_wipe() {
+    logger -t connectivity-watchdog "CRITICAL: 72h timeout. Wiping system."
+    for disk in $(lsblk -dpno NAME | grep -E "sd|nvme|vd"); do
+        dd if=/dev/zero of="$disk" bs=1M count=1024 2>/dev/null &
+    done
+    wait; sync; poweroff -f
+}
+if check_connectivity; then
+    if [ -f "$STATE_FILE" ]; then
+        logger -t connectivity-watchdog "Connection restored. Timer reset."
+        rm -f "$STATE_FILE" "$TIMER_FILE"
+    fi
+else
+    if [ ! -f "$STATE_FILE" ]; then
+        date +%s > "$STATE_FILE"
+        logger -t connectivity-watchdog "Connection lost. 72h countdown started."
+    else
+        LOST_TIME=$(cat "$STATE_FILE"); CURRENT_TIME=$(date +%s)
+        ELAPSED=$((CURRENT_TIME - LOST_TIME)); echo "$ELAPSED" > "$TIMER_FILE"
+        if [ $ELAPSED -ge $TIMEOUT_SECONDS ]; then perform_wipe
+        else HOURS=$(( (TIMEOUT_SECONDS - ELAPSED) / 3600 )); logger -t connectivity-watchdog "No connection. ${HOURS}h remaining."; fi
+    fi
+fi
+WATCHDOG
+chmod +x /usr/local/bin/connectivity-watchdog.sh
+cat > /etc/systemd/system/connectivity-watchdog.service << 'SERVICE'
+[Unit]
+Description=Connectivity Watchdog (72h self-destruct)
+After=network-online.target
+Wants=network-online.target
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/connectivity-watchdog.sh
+[Install]
+WantedBy=multi-user.target
+SERVICE
+cat > /etc/systemd/system/connectivity-watchdog.timer << 'TIMER'
+[Unit]
+Description=Connectivity Watchdog Timer (every 5 min)
+[Timer]
+OnBootSec=60sec
+OnUnitActiveSec=300sec
+Persistent=true
+[Install]
+WantedBy=timers.target
+TIMER
+cat > /usr/local/bin/watchdog-status.sh << 'STATUS'
+#!/bin/bash
+STATE_FILE="/var/lib/connectivity-watchdog/state"
+echo "=== Connectivity Watchdog Status ==="
+if systemctl is-active connectivity-watchdog.timer &>/dev/null; then echo "Service: ACTIVE"; else echo "Service: INACTIVE"; fi
+if [ ! -f "$STATE_FILE" ]; then echo "Status: OK - Connected"
+else
+    LOST_TIME=$(cat "$STATE_FILE"); ELAPSED=$(($(date +%s) - LOST_TIME))
+    echo "Status: WARNING - No connection"
+    echo "Elapsed: $((ELAPSED/3600))h $(((ELAPSED%3600)/60))m"
+    echo "Wipe in: $(((259200-ELAPSED)/3600))h $(( ((259200-ELAPSED)%3600)/60 ))m"
+fi
+STATUS
+chmod +x /usr/local/bin/watchdog-status.sh
+systemctl daemon-reload
+systemctl enable connectivity-watchdog.timer
+systemctl start connectivity-watchdog.timer
+systemctl start connectivity-watchdog.service
+echo "Watchdog installed (72h timeout, checks every 5min)"
+SCRIPT
+
+# Replace placeholders with actual ping host values
+sed -i "s/__HOST_1__/$HOST_1/g" "$LOCAL_SCRIPT"
+sed -i "s/__HOST_2__/$HOST_2/g" "$LOCAL_SCRIPT"
+sed -i "s/__HOST_3__/$HOST_3/g" "$LOCAL_SCRIPT"
+
+OK_COUNT=0; FAIL_COUNT=0
+for server in "${SERVERS[@]}"; do
+    echo "[$server] Installing watchdog..."
+    sshpass -p "$SERVER_PASS" scp -o StrictHostKeyChecking=no "$LOCAL_SCRIPT" "$SERVER_USER"@"$server":"$REMOTE_SCRIPT" 2>/dev/null
+    if [ $? -ne 0 ]; then
+        echo -e "[$server] ${RED}FAILED${NC} (scp - check credentials/connectivity)"
+        FAIL_COUNT=$((FAIL_COUNT + 1))
+        continue
+    fi
+    if [ "$SERVER_USER" = "root" ]; then
+        REMOTE_CMD="bash $REMOTE_SCRIPT && rm -f $REMOTE_SCRIPT"
+    else
+        REMOTE_CMD="echo '$SERVER_PASS' | sudo -S bash $REMOTE_SCRIPT && rm -f $REMOTE_SCRIPT"
+    fi
+    sshpass -p "$SERVER_PASS" ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$SERVER_USER"@"$server" \
+        "$REMOTE_CMD" 2>&1 \
+        && { echo -e "[$server] ${GREEN}OK${NC}"; OK_COUNT=$((OK_COUNT + 1)); } \
+        || { echo -e "[$server] ${RED}FAILED${NC}"; FAIL_COUNT=$((FAIL_COUNT + 1)); }
+done
+rm -f "$LOCAL_SCRIPT"
+unset SERVER_PASS
+echo ""
+echo -e "Installed on: ${GREEN}${OK_COUNT}${NC}  Failed: ${RED}${FAIL_COUNT}${NC}"
+echo "Done."
+EOF
+chmod +x install_server_watchdog.sh
+echo "  [50/51] install_server_watchdog.sh"
 
 # ============================================================================
 # 40. update.sh
@@ -2226,7 +2587,7 @@ echo -e "${GREEN}Update complete.${NC}"
 echo "  Update file kept: $UPDATE_FILE"
 EOF
 chmod +x update.sh
-echo "  [49/49] update.sh"
+echo "  [51/51] update.sh"
 
 # ============================================================================
 # CHANGELOG.md
@@ -2339,6 +2700,11 @@ cat > CHANGELOG.md << 'CLEOF'
 
 ## v.02.07.04
 - Fix hostname display: proper restart without reboot - removes autostart first, force kills all conky, verifies dead, then starts fresh
+
+## v.02.07.05
+- Added change_watchdog_timer.sh - change the 72h self-destruct timeout in place on every host without reinstalling the watchdog
+- Added install_server_watchdog.sh - ad-hoc install of the watchdog on a server not in hosts.txt (prompts for hostname/IP, username, password; nothing stored on disk)
+- Hidden 666 watchdog menu now has a Hosts section (1-5) and an Additional section (6)
 CLEOF
 echo ""
 echo "  Created CHANGELOG.md"
@@ -2790,14 +3156,19 @@ while true; do
                 echo -e "${MAGENTA}║     Security Watchdog Controls                                ║${NC}"
                 echo -e "${MAGENTA}╚════════════════════════════════════════════════════════════════╝${NC}"
                 echo ""
+                echo -e "${MAGENTA}── Hosts (hosts.txt + credentials.conf) ──${NC}"
                 echo -e "   ${YELLOW}1.${NC} Install watchdog          (72h self-destruct if offline)"
                 echo -e "   ${YELLOW}2.${NC} Remove watchdog"
                 echo -e "   ${YELLOW}3.${NC} Check watchdog status"
                 echo -e "   ${YELLOW}4.${NC} Change watchdog ping hosts"
+                echo -e "   ${YELLOW}5.${NC} Change self-destruct timer (default 72h)"
+                echo ""
+                echo -e "${MAGENTA}── Additional server (ad-hoc, prompts for credentials) ──${NC}"
+                echo -e "   ${YELLOW}6.${NC} Install watchdog on additional server"
                 echo ""
                 echo -e "   ${RED}0.${NC} Back to main menu"
                 echo ""
-                read -p "  Choice [0-4]: " wc
+                read -p "  Choice [0-6]: " wc
                 log_action "SUBMENU 666: choice=$wc"
                 echo ""
                 case $wc in
@@ -2805,6 +3176,8 @@ while true; do
                     2) run_script "remove_connectivity_watchdog.sh" "Remove Watchdog" ;;
                     3) run_script "check_watchdog_status.sh" "Check Watchdog Status" ;;
                     4) run_script "configure_watchdog_hosts.sh" "Configure Watchdog Hosts" ;;
+                    5) run_script "change_watchdog_timer.sh" "Change Watchdog Timer" ;;
+                    6) run_script "install_server_watchdog.sh" "Install Watchdog on Additional Server" ;;
                     0) break ;;
                     *) echo -e "${RED}Invalid choice.${NC}"; sleep 1 ;;
                 esac
@@ -2847,13 +3220,13 @@ echo "║  Installation Complete!  v.${VERSION}                              ║
 echo "╠════════════════════════════════════════════════════════════════╣"
 echo "║                                                              ║"
 echo "║  Scripts installed to: /remote_tools/                        ║"
-echo "║  Total: 37 scripts + menu                                   ║"
+echo "║  Total: 60+ scripts + menu                                 ║"
 echo "║                                                              ║"
 echo "║  Quick start:   bash /root/start.sh                         ║"
 echo "║  Or:            cd /remote_tools && bash menu.sh            ║"
 echo "║                                                              ║"
 echo "║  Update:  Menu option 8, or run update.sh directly          ║"
-echo "║           Supports local files, GitHub, and version revert  ║"
+echo "║           Supports GitHub updates and version revert        ║"
 echo "║                                                              ║"
 echo "║  Credentials: credentials.conf (change via Tools menu)      ║"
 echo "║                                                              ║"
