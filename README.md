@@ -2,6 +2,11 @@
 
 A command-line tool for managing fleets of Debian-based Linux computers from a single server. One interactive menu, 60+ scripts, SSH-based parallel execution. Built for sysadmins who need to maintain dozens (or hundreds) of machines without Ansible overhead.
 
+> **📱 Also available as an Android app!** Manage your fleet from your phone.
+> [Download Atomator Mobile](https://github.com/axelsarassamit/atomator-android-app)
+
+
+
 **Compatible with all Debian-based distributions:**
 - Debian 10+ (Buster, Bullseye, Bookworm, Trixie)
 - Ubuntu 20.04+ / Xubuntu / Kubuntu / Lubuntu
