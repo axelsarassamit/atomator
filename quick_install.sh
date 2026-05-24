@@ -6,7 +6,7 @@
 # Run on your Debian server: sudo bash quick_install.sh
 # ============================================================================
 
-VERSION="02.08.00"
+VERSION="02.09.00"
 
 set -e
 
@@ -101,32 +101,33 @@ MAX_JOBS=${MAX_PARALLEL:-5}
 HOSTS=($(grep -v "^#" hosts.txt | grep -v "^$"))
 TOTAL=${#HOSTS[@]}
 OK_COUNT=0; FAIL_COUNT=0
-TMP_OUT=$(mktemp -d); trap "rm -rf $TMP_OUT" EXIT
+TMPDIR=$(mktemp -d)
+trap "rm -rf $TMPDIR" EXIT
 
-run_task() {
+run_update() {
     local host="$1" idx="$2"
     sshpass -p "$SSH_PASS" ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 -o ServerAliveInterval=30 "$SSH_USER"@"$host" \
-        'echo '"$SSH_PASS"' | sudo -S bash -c "DEBIAN_FRONTEND=noninteractive apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get upgrade -y -o Dpkg::Options::=--force-confold && DEBIAN_FRONTEND=noninteractive apt-get autoremove -y && apt-get autoclean -y"' 2>/dev/null
-    [ $? -eq 0 ] && echo "OK" > "$TMP_OUT/$idx" || echo "FAIL" > "$TMP_OUT/$idx"
+        'echo '"$SSH_PASS"' | sudo -S bash -c "DEBIAN_FRONTEND=noninteractive apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get upgrade -y -o Dpkg::Options::=--force-confold && DEBIAN_FRONTEND=noninteractive apt-get autoremove -y && apt-get autoclean -y"' &>/dev/null
+    [ $? -eq 0 ] && echo "OK" > "$TMPDIR/$idx" || echo "FAIL" > "$TMPDIR/$idx"
 }
 
 for i in "${!HOSTS[@]}"; do
-    run_task "${HOSTS[$i]}" "$i" &
-    echo "[$(( i+1 ))/$TOTAL] ${HOSTS[$i]} - started"
+    run_update "${HOSTS[$i]}" "$i" &
+    echo "[$((i+1))/$TOTAL] ${HOSTS[$i]} - started"
     while [ $(jobs -r | wc -l) -ge $MAX_JOBS ]; do sleep 0.5; done
 done
 wait
 
-echo ""
 for i in "${!HOSTS[@]}"; do
-    if grep -q "OK" "$TMP_OUT/$i" 2>/dev/null; then
-        echo -e "  ${GREEN}[OK]${NC}     ${HOSTS[$i]}"
+    if [ -f "$TMPDIR/$i" ] && grep -q "OK" "$TMPDIR/$i"; then
+        echo -e "  \033[0;32m[OK]\033[0m     ${HOSTS[$i]}"
         OK_COUNT=$((OK_COUNT + 1))
     else
-        echo -e "  ${RED}[FAILED]${NC} ${HOSTS[$i]}"
+        echo -e "  \033[0;31m[FAILED]\033[0m ${HOSTS[$i]}"
         FAIL_COUNT=$((FAIL_COUNT + 1))
     fi
 done
+
 ELAPSED=$(( $(date +%s) - START_TIME ))
 echo ""
 echo "Done in ${ELAPSED}s | OK: $OK_COUNT | Failed: $FAIL_COUNT | Total: $TOTAL"
@@ -150,32 +151,33 @@ MAX_JOBS=${MAX_PARALLEL:-5}
 HOSTS=($(grep -v "^#" hosts.txt | grep -v "^$"))
 TOTAL=${#HOSTS[@]}
 OK_COUNT=0; FAIL_COUNT=0
-TMP_OUT=$(mktemp -d); trap "rm -rf $TMP_OUT" EXIT
+TMPDIR=$(mktemp -d)
+trap "rm -rf $TMPDIR" EXIT
 
-run_task() {
+run_host() {
     local host="$1" idx="$2"
     sshpass -p "$SSH_PASS" ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 -o ServerAliveInterval=30 "$SSH_USER"@"$host" \
-        'echo '"$SSH_PASS"' | sudo -S bash -c "DEBIAN_FRONTEND=noninteractive apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get upgrade -y -o Dpkg::Options::=--force-confold && DEBIAN_FRONTEND=noninteractive apt-get autoremove -y --purge && apt-get autoclean -y"' 2>/dev/null
-    [ $? -eq 0 ] && echo "OK" > "$TMP_OUT/$idx" || echo "FAIL" > "$TMP_OUT/$idx"
+        'echo '"$SSH_PASS"' | sudo -S bash -c "DEBIAN_FRONTEND=noninteractive apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get upgrade -y -o Dpkg::Options::=--force-confold && DEBIAN_FRONTEND=noninteractive apt-get autoremove -y --purge && apt-get autoclean -y"' &>/dev/null
+    [ $? -eq 0 ] && echo "OK" > "$TMPDIR/$idx" || echo "FAIL" > "$TMPDIR/$idx"
 }
 
 for i in "${!HOSTS[@]}"; do
-    run_task "${HOSTS[$i]}" "$i" &
-    echo "[$(( i+1 ))/$TOTAL] ${HOSTS[$i]} - started"
+    run_host "${HOSTS[$i]}" "$i" &
+    echo "[$((i+1))/$TOTAL] ${HOSTS[$i]} - started"
     while [ $(jobs -r | wc -l) -ge $MAX_JOBS ]; do sleep 0.5; done
 done
 wait
 
-echo ""
 for i in "${!HOSTS[@]}"; do
-    if grep -q "OK" "$TMP_OUT/$i" 2>/dev/null; then
-        echo -e "  ${GREEN}[OK]${NC}     ${HOSTS[$i]}"
+    if [ -f "$TMPDIR/$i" ] && grep -q "OK" "$TMPDIR/$i"; then
+        echo -e "  \033[0;32m[OK]\033[0m     ${HOSTS[$i]}"
         OK_COUNT=$((OK_COUNT + 1))
     else
-        echo -e "  ${RED}[FAILED]${NC} ${HOSTS[$i]}"
+        echo -e "  \033[0;31m[FAILED]\033[0m ${HOSTS[$i]}"
         FAIL_COUNT=$((FAIL_COUNT + 1))
     fi
 done
+
 ELAPSED=$(( $(date +%s) - START_TIME ))
 echo ""
 echo "Done in ${ELAPSED}s | OK: $OK_COUNT | Failed: $FAIL_COUNT | Total: $TOTAL"
@@ -199,9 +201,10 @@ MAX_JOBS=${MAX_PARALLEL:-5}
 HOSTS=($(grep -v "^#" hosts.txt | grep -v "^$"))
 TOTAL=${#HOSTS[@]}
 OK_COUNT=0; FAIL_COUNT=0
-TMP_OUT=$(mktemp -d); trap "rm -rf $TMP_OUT" EXIT
+TMPDIR=$(mktemp -d)
+trap "rm -rf $TMPDIR" EXIT
 
-run_task() {
+run_host() {
     local host="$1" idx="$2"
     sshpass -p "$SSH_PASS" ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 -o ServerAliveInterval=30 "$SSH_USER"@"$host" \
         'echo '"$SSH_PASS"' | sudo -S bash -c "
@@ -212,31 +215,28 @@ run_task() {
         systemctl stop apt-daily-upgrade.timer 2>/dev/null || true
         systemctl disable apt-daily-upgrade.timer 2>/dev/null || true
         DEBIAN_FRONTEND=noninteractive apt-get remove -y unattended-upgrades 2>/dev/null || true
-        echo \"APT::Periodic::Update-Package-Lists \\\"0\\\";\" > /etc/apt/apt.conf.d/20auto-upgrades
-        echo \"APT::Periodic::Unattended-Upgrade \\\"0\\\";\" >> /etc/apt/apt.conf.d/20auto-upgrades
-        echo \"APT::Periodic::Download-Upgradeable-Packages \\\"0\\\";\" >> /etc/apt/apt.conf.d/20auto-upgrades
-        echo \"APT::Periodic::AutocleanInterval \\\"0\\\";\" >> /etc/apt/apt.conf.d/20auto-upgrades
-    "' 2>/dev/null
-    [ $? -eq 0 ] && echo "OK" > "$TMP_OUT/$idx" || echo "FAIL" > "$TMP_OUT/$idx"
+        printf \"APT::Periodic::Update-Package-Lists \\\"0\\\";\\nAPT::Periodic::Unattended-Upgrade \\\"0\\\";\\nAPT::Periodic::Download-Upgradeable-Packages \\\"0\\\";\\nAPT::Periodic::AutocleanInterval \\\"0\\\";\\n\" > /etc/apt/apt.conf.d/20auto-upgrades
+    "' &>/dev/null
+    [ $? -eq 0 ] && echo "OK" > "$TMPDIR/$idx" || echo "FAIL" > "$TMPDIR/$idx"
 }
 
 for i in "${!HOSTS[@]}"; do
-    run_task "${HOSTS[$i]}" "$i" &
-    echo "[$(( i+1 ))/$TOTAL] ${HOSTS[$i]} - started"
+    run_host "${HOSTS[$i]}" "$i" &
+    echo "[$((i+1))/$TOTAL] ${HOSTS[$i]} - started"
     while [ $(jobs -r | wc -l) -ge $MAX_JOBS ]; do sleep 0.5; done
 done
 wait
 
-echo ""
 for i in "${!HOSTS[@]}"; do
-    if grep -q "OK" "$TMP_OUT/$i" 2>/dev/null; then
-        echo -e "  ${GREEN}[OK]${NC}     ${HOSTS[$i]}"
+    if [ -f "$TMPDIR/$i" ] && grep -q "OK" "$TMPDIR/$i"; then
+        echo -e "  \033[0;32m[OK]\033[0m     ${HOSTS[$i]}"
         OK_COUNT=$((OK_COUNT + 1))
     else
-        echo -e "  ${RED}[FAILED]${NC} ${HOSTS[$i]}"
+        echo -e "  \033[0;31m[FAILED]\033[0m ${HOSTS[$i]}"
         FAIL_COUNT=$((FAIL_COUNT + 1))
     fi
 done
+
 ELAPSED=$(( $(date +%s) - START_TIME ))
 echo ""
 echo "Done in ${ELAPSED}s | OK: $OK_COUNT | Failed: $FAIL_COUNT | Total: $TOTAL"
@@ -260,9 +260,10 @@ MAX_JOBS=${MAX_PARALLEL:-5}
 HOSTS=($(grep -v "^#" hosts.txt | grep -v "^$"))
 TOTAL=${#HOSTS[@]}
 OK_COUNT=0; FAIL_COUNT=0
-TMP_OUT=$(mktemp -d); trap "rm -rf $TMP_OUT" EXIT
+TMPDIR=$(mktemp -d)
+trap "rm -rf $TMPDIR" EXIT
 
-run_task() {
+run_host() {
     local host="$1" idx="$2"
     sshpass -p "$SSH_PASS" ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 -o ServerAliveInterval=30 "$SSH_USER"@"$host" \
         'echo '"$SSH_PASS"' | sudo -S bash -c "
@@ -275,27 +276,27 @@ run_task() {
         rm -rf /home/*/.local/share/Trash/files/* 2>/dev/null || true
         rm -rf /home/*/.local/share/Trash/info/* 2>/dev/null || true
         rm -rf /home/*/.cache/thumbnails/* 2>/dev/null || true
-    "' 2>/dev/null
-    [ $? -eq 0 ] && echo "OK" > "$TMP_OUT/$idx" || echo "FAIL" > "$TMP_OUT/$idx"
+    "' &>/dev/null
+    [ $? -eq 0 ] && echo "OK" > "$TMPDIR/$idx" || echo "FAIL" > "$TMPDIR/$idx"
 }
 
 for i in "${!HOSTS[@]}"; do
-    run_task "${HOSTS[$i]}" "$i" &
-    echo "[$(( i+1 ))/$TOTAL] ${HOSTS[$i]} - started"
+    run_host "${HOSTS[$i]}" "$i" &
+    echo "[$((i+1))/$TOTAL] ${HOSTS[$i]} - started"
     while [ $(jobs -r | wc -l) -ge $MAX_JOBS ]; do sleep 0.5; done
 done
 wait
 
-echo ""
 for i in "${!HOSTS[@]}"; do
-    if grep -q "OK" "$TMP_OUT/$i" 2>/dev/null; then
-        echo -e "  ${GREEN}[OK]${NC}     ${HOSTS[$i]}"
+    if [ -f "$TMPDIR/$i" ] && grep -q "OK" "$TMPDIR/$i"; then
+        echo -e "  \033[0;32m[OK]\033[0m     ${HOSTS[$i]}"
         OK_COUNT=$((OK_COUNT + 1))
     else
-        echo -e "  ${RED}[FAILED]${NC} ${HOSTS[$i]}"
+        echo -e "  \033[0;31m[FAILED]\033[0m ${HOSTS[$i]}"
         FAIL_COUNT=$((FAIL_COUNT + 1))
     fi
 done
+
 ELAPSED=$(( $(date +%s) - START_TIME ))
 echo ""
 echo "Done in ${ELAPSED}s | OK: $OK_COUNT | Failed: $FAIL_COUNT | Total: $TOTAL"
@@ -3279,13 +3280,13 @@ echo "║  Installation Complete!  v.${VERSION}                              ║
 echo "╠════════════════════════════════════════════════════════════════╣"
 echo "║                                                              ║"
 echo "║  Scripts installed to: /remote_tools/                        ║"
-echo "║  Total: 37 scripts + menu                                   ║"
+echo "║  Total: 60+ scripts + menu                                 ║"
 echo "║                                                              ║"
 echo "║  Quick start:   bash /root/start.sh                         ║"
 echo "║  Or:            cd /remote_tools && bash menu.sh            ║"
 echo "║                                                              ║"
 echo "║  Update:  Menu option 8, or run update.sh directly          ║"
-echo "║           Supports local files, GitHub, and version revert  ║"
+echo "║           Supports GitHub updates and version revert        ║"
 echo "║                                                              ║"
 echo "║  Credentials: credentials.conf (change via Tools menu)      ║"
 echo "║                                                              ║"

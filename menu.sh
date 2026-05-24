@@ -1,11 +1,12 @@
 #!/bin/bash
+BOLD='\033[1m'; DIM='\033[2m'
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; BLUE='\033[0;34m'
-CYAN='\033[0;36m'; MAGENTA='\033[0;35m'; NC='\033[0m'
+CYAN='\033[0;36m'; MAGENTA='\033[0;35m'; WHITE='\033[1;37m'; NC='\033[0m'
+BG_CYAN='\033[46m'; BG_BLUE='\033[44m'; BG_DARK='\033[100m'
 
 VERSION=$(head -1 version.txt 2>/dev/null || echo "unknown")
 INSTALLED=$(tail -1 version.txt 2>/dev/null || echo "unknown")
 
-# Debug logging
 LOG_FILE="debug.log"
 LOG_MAX=10485760
 log_action() {
@@ -16,65 +17,118 @@ log_action() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" >> "$LOG_FILE"
 }
 
+get_online_count() {
+    local online=0
+    for host in $(grep -v "^#" hosts.txt 2>/dev/null | grep -v "^$" | head -5); do
+        ping -c 1 -W 1 "$host" &>/dev/null && online=$((online + 1))
+    done &
+    wait
+    echo "$online"
+}
+
 show_header() {
     clear
-    local NOW=$(date '+%Y-%m-%d %H:%M')
-    echo -e "${CYAN}╔════════════════════════════════════════════════════════════════╗${NC}"
-    echo -e "${CYAN}║   Atomator  v.${VERSION}  -  Remote Xubuntu Management           ║${NC}"
-    echo -e "${CYAN}╚════════════════════════════════════════════════════════════════╝${NC}"
-    echo -e "${BLUE}  ${NOW}${NC}"
+    local HOST_COUNT=$(grep -v "^#" hosts.txt 2>/dev/null | grep -v "^$" | wc -l)
+    local NOW=$(date '+%H:%M:%S')
+    echo ""
+    echo -e "  ${CYAN}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo ""
+    echo -e "     ${WHITE}${BOLD}⚡  A T O M A T O R${NC}"
+    echo -e "     ${DIM}Remote Xubuntu Management System${NC}"
+    echo ""
+    echo -e "     ${DIM}v.${VERSION}  |  ${HOST_COUNT} hosts  |  ${NOW}${NC}"
+    echo ""
+    echo -e "  ${CYAN}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
     echo ""
 }
-pause() { echo ""; read -p "Press Enter to continue..."; }
+
+show_divider() {
+    echo -e "  ${DIM}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+}
+
+show_section() {
+    echo -e "  ${CYAN}${BOLD}  $1${NC}"
+}
+
+show_subsection() {
+    echo -e "  ${DIM}  -- $1 --${NC}"
+}
+
+show_item() {
+    local num="$1" icon="$2" label="$3" desc="$4"
+    if [ ${#num} -eq 1 ]; then
+        printf "  ${YELLOW}${BOLD}   %s${NC}  ${WHITE}%s  %-28s${NC} ${DIM}%s${NC}\n" "$num" "$icon" "$label" "$desc"
+    else
+        printf "  ${YELLOW}${BOLD}  %s${NC}  ${WHITE}%s  %-28s${NC} ${DIM}%s${NC}\n" "$num" "$icon" "$label" "$desc"
+    fi
+}
+
+show_back() {
+    echo ""
+    echo -e "  ${RED}${BOLD}   0${NC}  ${DIM}◄  Back${NC}"
+}
+
+show_exit() {
+    echo ""
+    echo -e "  ${RED}${BOLD}   0${NC}  ${DIM}⏻  Exit${NC}"
+}
+
+show_prompt() {
+    echo ""
+    show_divider
+    echo ""
+    echo -ne "  ${CYAN}❯${NC} "
+}
+
+pause() { echo ""; echo -ne "  ${DIM}Press Enter to continue...${NC}"; read; }
+
 run_script() {
     show_header
-    echo -e "${GREEN}Running: $2${NC}"
-    echo -e "${BLUE}Script:  $1${NC}"
+    echo -e "  ${GREEN}${BOLD}▶ Running:${NC} $2"
+    echo -e "  ${DIM}  Script:  $1${NC}"
+    echo ""
+    show_divider
     echo ""
     log_action "RUN: $1 ($2)"
-    if [ -f "./$1" ]; then bash "./$1"; else echo -e "${RED}Error: $1 not found!${NC}"; fi
+    if [ -f "./$1" ]; then bash "./$1"; else echo -e "  ${RED}Error: $1 not found!${NC}"; fi
     log_action "DONE: $1"
     pause
 }
+
 view_latest() {
     show_header
     LATEST=$(ls -1t $1 2>/dev/null | head -1)
     if [ -n "$LATEST" ]; then
-        echo -e "${GREEN}Latest: $LATEST${NC}"
+        echo -e "  ${GREEN}${BOLD}📄 Latest:${NC} $LATEST"
+        echo ""
+        show_divider
         echo ""
         less -FRX "$LATEST"
     else
-        echo -e "${RED}No reports found.${NC}"
-        pause
+        echo -e "  ${RED}No reports found.${NC}"
     fi
     log_action "VIEW: $1"
 }
 
 log_action "=== Menu started ==="
 
-# ── SUBMENUS ──
-
 menu_updates() {
     while true; do
         show_header
-        HOST_COUNT=$(grep -v "^#" hosts.txt 2>/dev/null | grep -v "^$" | wc -l)
-        echo -e "${BLUE}  Hosts: ${HOST_COUNT}  |  Installed: ${INSTALLED}${NC}"
+        show_section "SYSTEM UPDATES & MAINTENANCE"
         echo ""
-        echo -e "${MAGENTA}  SYSTEM UPDATES & MAINTENANCE${NC}"
+        show_subsection "Updates"
+        show_item "1" "🔄" "Update all systems" "apt update + upgrade"
+        show_item "2" "🧹" "Update + purge kernels" "frees disk space"
+        show_item "3" "🚫" "Disable auto updates" "stops unattended-upgrades"
         echo ""
-        echo -e "   ${CYAN}--- UPDATES ---${NC}"
-        echo -e "   ${YELLOW}1.${NC} Update all systems            (apt update + upgrade)"
-        echo -e "   ${YELLOW}2.${NC} Update + remove old kernels   (frees disk space)"
-        echo -e "   ${YELLOW}3.${NC} Disable automatic updates     (stops unattended-upgrades)"
-        echo ""
-        echo -e "   ${CYAN}--- MAINTENANCE ---${NC}"
-        echo -e "   ${YELLOW}4.${NC} System cleanup                (cache, logs, trash)"
-        echo -e "   ${YELLOW}5.${NC} Reboot all hosts              (restart all remote machines)"
-        echo -e "   ${YELLOW}6.${NC} Shutdown all hosts            (power off all remote machines)"
-        echo ""
-        echo -e "   ${RED}0.${NC} Back"
-        echo ""
-        read -p "  Choice [0-6]: " c
+        show_subsection "Maintenance"
+        show_item "4" "🗑️" " System cleanup" "cache, logs, trash"
+        show_item "5" "♻️" " Reboot all hosts" "restart machines"
+        show_item "6" "⏹️" " Shutdown all hosts" "power off machines"
+        show_back
+        show_prompt
+        read c
         log_action "SUBMENU updates: choice=$c"
         case $c in
             1) run_script "update_all.sh" "Update All Systems" ;;
@@ -84,7 +138,7 @@ menu_updates() {
             5) run_script "reboot.sh" "Reboot All Hosts" ;;
             6) run_script "shutdown_all.sh" "Shutdown All Hosts" ;;
             0) break ;;
-            *) echo -e "${RED}Invalid.${NC}"; sleep 1 ;;
+            *) echo -e "  ${RED}Invalid.${NC}"; sleep 1 ;;
         esac
     done
 }
@@ -92,40 +146,37 @@ menu_updates() {
 menu_network() {
     while true; do
         show_header
-        HOST_COUNT=$(grep -v "^#" hosts.txt 2>/dev/null | grep -v "^$" | wc -l)
-        echo -e "${BLUE}  Hosts: ${HOST_COUNT}  |  Installed: ${INSTALLED}${NC}"
+        show_section "NETWORK"
         echo ""
-        echo -e "${MAGENTA}  NETWORK${NC}"
+        show_subsection "Status & Wake"
+        show_item "1" "📡" "Check host status" "ping all hosts"
+        show_item "2" "⚡" "Wake-on-LAN" "wake up computers"
+        show_item "3" "🔍" "Collect MAC addresses" "gather for WOL"
+        show_item "4" "📋" "View MAC addresses" "show collected"
         echo ""
-        echo -e "   ${CYAN}--- STATUS & WAKE ---${NC}"
-        echo -e "   ${YELLOW} 1.${NC} Check host status             (ping all hosts)"
-        echo -e "   ${YELLOW} 2.${NC} Wake-on-LAN                   (wake up all computers)"
-        echo -e "   ${YELLOW} 3.${NC} Collect MAC addresses          (gather addresses for WOL)"
-        echo -e "   ${YELLOW} 4.${NC} View MAC addresses             (show collected addresses)"
+        show_subsection "DNS & IP"
+        show_item "5" "🌐" "Change DNS servers" "Cloudflare/Google/custom"
+        show_item "6" "📌" "Fix static IP" "gateway + hostname digits"
+        show_item "7" "📶" "Disable WiFi" "permanent, all hosts"
         echo ""
-        echo -e "   ${CYAN}--- DNS & IP ---${NC}"
-        echo -e "   ${YELLOW} 5.${NC} Change DNS servers             (Cloudflare/Google/Quad9 or custom)"
-        echo -e "   ${YELLOW} 6.${NC} Fix static IP                  (gateway + hostname digits, choose DNS)"
-        echo -e "   ${YELLOW} 7.${NC} Disable WiFi                   (permanent, all hosts)"
-        echo ""
-        echo -e "   ${CYAN}--- SECURITY & TESTING ---${NC}"
-        echo -e "   ${YELLOW} 8.${NC} Remove VPN + reset network     (clean VPN, set static IP)"
-        echo -e "   ${YELLOW} 9.${NC} Lock network settings          (require sudo for changes)"
-        echo -e "   ${YELLOW}10.${NC} Speed test all hosts           (run speedtest-cli on each host)"
-        echo -e "   ${YELLOW}11.${NC} View latest speed test         (show most recent results)"
-        echo ""
-        echo -e "   ${RED} 0.${NC} Back"
-        echo ""
-        read -p "  Choice [0-11]: " c
+        show_subsection "Security & Testing"
+        show_item "8" "🔒" "Remove VPN + reset network" "clean VPN, set static"
+        show_item "9" "🛡️" " Lock network settings" "require sudo"
+        show_item "10" "🚀" "Speed test all hosts" "run speedtest-cli"
+        show_item "11" "📊" "View latest speed test" "show recent results"
+        show_item "12" "🌍" "Check internet" "HTTP + ping test"
+        show_back
+        show_prompt
+        read c
         log_action "SUBMENU network: choice=$c"
         case $c in
             1)  run_script "check_hosts.sh" "Check Host Status" ;;
             2)  run_script "wol_all.sh" "Wake-on-LAN" ;;
             3)  run_script "collect_mac_addresses.sh" "Collect MAC Addresses" ;;
             4)  show_header
-                echo -e "${GREEN}MAC Addresses:${NC}"
+                echo -e "  ${GREEN}${BOLD}📋 MAC Addresses:${NC}"
                 echo ""
-                if [ -f "./mac_addresses.txt" ]; then cat ./mac_addresses.txt; else echo -e "${RED}No MAC addresses collected yet. Run option 3 first.${NC}"; fi
+                if [ -f "./mac_addresses.txt" ]; then cat ./mac_addresses.txt; else echo -e "  ${RED}No MAC addresses collected yet. Run option 3 first.${NC}"; fi
                 pause ;;
             5)  run_script "change_dns.sh" "Change DNS Servers" ;;
             6)  run_script "fix_static_ip.sh" "Fix Static IP" ;;
@@ -134,8 +185,9 @@ menu_network() {
             9)  run_script "require_sudo_network.sh" "Lock Network Settings" ;;
             10) run_script "speedtest_all.sh" "Speed Test All Hosts" ;;
             11) view_latest "speedtest_results_*.txt" ;;
+            12) run_script "check_internet.sh" "Check Internet Connectivity" ;;
             0)  break ;;
-            *)  echo -e "${RED}Invalid.${NC}"; sleep 1 ;;
+            *)  echo -e "  ${RED}Invalid.${NC}"; sleep 1 ;;
         esac
     done
 }
@@ -143,34 +195,22 @@ menu_network() {
 menu_info() {
     while true; do
         show_header
-        HOST_COUNT=$(grep -v "^#" hosts.txt 2>/dev/null | grep -v "^$" | wc -l)
-        echo -e "${BLUE}  Hosts: ${HOST_COUNT}  |  Installed: ${INSTALLED}${NC}"
+        show_section "INFORMATION & REPORTS"
         echo ""
-        echo -e "${MAGENTA}  INFORMATION & REPORTS${NC}"
-        echo ""
-        echo -e "   ${CYAN}--- HARDWARE ---${NC}"
-        echo -e "   ${YELLOW} 1.${NC} Collect hardware info          (CPU, RAM, disk, model)"
-        echo -e "   ${YELLOW} 2.${NC} View latest hardware report    (show most recent report)"
-        echo ""
-        echo -e "   ${CYAN}--- MEMORY ---${NC}"
-        echo -e "   ${YELLOW} 3.${NC} Collect RAM info               (detailed memory report)"
-        echo -e "   ${YELLOW} 4.${NC} View latest RAM report         (show most recent report)"
-        echo ""
-        echo -e "   ${CYAN}--- DISK ---${NC}"
-        echo -e "   ${YELLOW} 5.${NC} Check disk space               (warns if disk is full)"
-        echo -e "   ${YELLOW} 6.${NC} View latest disk report        (show most recent report)"
-        echo ""
-        echo -e "   ${CYAN}--- UPTIME ---${NC}"
-        echo -e "   ${YELLOW} 7.${NC} Check uptime                   (how long each host is running)"
-        echo -e "   ${YELLOW} 8.${NC} View latest uptime report      (show most recent report)"
-        echo ""
-        echo -e "   ${CYAN}--- SERVICES ---${NC}"
-        echo -e "   ${YELLOW} 9.${NC} Check services                 (SSH, NetworkManager, cron)"
-        echo -e "   ${YELLOW}10.${NC} View latest services report    (show most recent report)"
-        echo ""
-        echo -e "   ${RED} 0.${NC} Back"
-        echo ""
-        read -p "  Choice [0-10]: " c
+        show_item "1" "🖥️" " Hardware info" "CPU, RAM, disk, model"
+        show_item "2" "📄" "View hardware report" "show latest"
+        show_item "3" "💾" "RAM info" "detailed memory"
+        show_item "4" "📄" "View RAM report" "show latest"
+        show_item "5" "💿" "Disk space" "warns if full"
+        show_item "6" "📄" "View disk report" "show latest"
+        show_item "7" "⏱️" " Uptime" "how long running"
+        show_item "8" "📄" "View uptime report" "show latest"
+        show_item "9" "⚙️" " Services" "SSH, NM, cron"
+        show_item "10" "📄" "View services report" "show latest"
+        show_item "11" "📈" "Fleet health summary" "RAM, disk, uptime stats"
+        show_back
+        show_prompt
+        read c
         log_action "SUBMENU info: choice=$c"
         case $c in
             1)  run_script "collect_hardware_info.sh" "Collect Hardware Info" ;;
@@ -183,8 +223,9 @@ menu_info() {
             8)  view_latest "uptime_*.txt" ;;
             9)  run_script "check_services.sh" "Check Services" ;;
             10) view_latest "services_*.txt" ;;
+            11) run_script "system_info_summary.sh" "Fleet Health Summary" ;;
             0)  break ;;
-            *)  echo -e "${RED}Invalid.${NC}"; sleep 1 ;;
+            *)  echo -e "  ${RED}Invalid.${NC}"; sleep 1 ;;
         esac
     done
 }
@@ -192,33 +233,33 @@ menu_info() {
 menu_software() {
     while true; do
         show_header
-        echo -e "${MAGENTA}  SOFTWARE${NC}"
+        show_section "SOFTWARE"
         echo ""
-        echo -e "   ${CYAN}--- INSTALL ---${NC}"
-        echo -e "   ${YELLOW} 1.${NC} Install Firefox                (default ESR browser)"
-        echo -e "   ${YELLOW} 2.${NC} Install Google Chrome          (Google's official browser)"
-        echo -e "   ${YELLOW} 3.${NC} Install Chromium               (open-source Chrome alternative)"
-        echo -e "   ${YELLOW} 4.${NC} Install Wine                   (run Windows .exe files)"
-        echo -e "   ${YELLOW} 5.${NC} Install Simplenote             (note-taking app)"
-        echo -e "   ${YELLOW} 6.${NC} Install Redshift               (screen color temperature)"
-        echo -e "   ${YELLOW} 7.${NC} Install Xpad                   (sticky notes on desktop)"
-        echo -e "   ${YELLOW} 8.${NC} Install hostname display       (conky overlay on desktop)"
+        show_subsection "Install"
+        show_item "1" "🦊" "Firefox" "default ESR browser"
+        show_item "2" "🌍" "Google Chrome" "official browser"
+        show_item "3" "💠" "Chromium" "open-source Chrome"
+        show_item "4" "🍷" "Wine" "run Windows .exe"
+        show_item "5" "📝" "Simplenote" "note-taking app"
+        show_item "6" "🌅" "Redshift" "screen color temp"
+        show_item "7" "📌" "Xpad" "sticky notes"
+        show_item "8" "🏷️" " Hostname display" "conky overlay"
+        show_item "9" "📦" "Install any package" "apt install by name"
         echo ""
-        echo -e "   ${CYAN}--- REMOVE ---${NC}"
-        echo -e "   ${YELLOW} 9.${NC} Remove Firefox                 (uninstall browser)"
-        echo -e "   ${YELLOW}10.${NC} Remove Google Chrome           (uninstall browser + repo)"
-        echo -e "   ${YELLOW}11.${NC} Remove Chromium                (uninstall browser)"
-        echo -e "   ${YELLOW}12.${NC} Remove Wine                    (uninstall Windows layer)"
-        echo -e "   ${YELLOW}13.${NC} Remove Simplenote              (uninstall note-taking app)"
-        echo -e "   ${YELLOW}14.${NC} Remove Redshift                (uninstall color filter)"
-        echo -e "   ${YELLOW}15.${NC} Remove Xpad                    (uninstall sticky notes)"
+        show_subsection "Remove"
+        show_item "10" "❌" "Firefox" ""
+        show_item "11" "❌" "Google Chrome" ""
+        show_item "12" "❌" "Chromium" ""
+        show_item "13" "❌" "Wine" ""
+        show_item "14" "❌" "Simplenote" ""
+        show_item "15" "❌" "Redshift" ""
+        show_item "16" "❌" "Xpad" ""
         echo ""
-        echo -e "   ${CYAN}--- FIX ---${NC}"
-        echo -e "   ${YELLOW}16.${NC} Fix hostname display           (repair/restart conky)"
-        echo ""
-        echo -e "   ${RED} 0.${NC} Back"
-        echo ""
-        read -p "  Choice [0-16]: " c
+        show_subsection "Fix"
+        show_item "17" "🔧" "Fix hostname display" "repair/restart conky"
+        show_back
+        show_prompt
+        read c
         log_action "SUBMENU software: choice=$c"
         case $c in
             1)  run_script "install_firefox.sh" "Install Firefox" ;;
@@ -229,16 +270,17 @@ menu_software() {
             6)  run_script "install_redshift.sh" "Install Redshift" ;;
             7)  run_script "install_xpad.sh" "Install Xpad" ;;
             8)  run_script "install_hostname_display.sh" "Install Hostname Display" ;;
-            9)  run_script "uninstall_firefox.sh" "Uninstall Firefox" ;;
-            10) run_script "remove_chrome.sh" "Remove Google Chrome" ;;
-            11) run_script "remove_chromium.sh" "Remove Chromium" ;;
-            12) run_script "remove_wine.sh" "Remove Wine" ;;
-            13) run_script "remove_simplenote.sh" "Remove Simplenote" ;;
-            14) run_script "remove_redshift.sh" "Remove Redshift" ;;
-            15) run_script "remove_xpad.sh" "Remove Xpad" ;;
-            16) run_script "fix_hostname_display.sh" "Fix Hostname Display" ;;
+            9)  run_script "install_package.sh" "Install Package" ;;
+            10) run_script "uninstall_firefox.sh" "Uninstall Firefox" ;;
+            11) run_script "remove_chrome.sh" "Remove Google Chrome" ;;
+            12) run_script "remove_chromium.sh" "Remove Chromium" ;;
+            13) run_script "remove_wine.sh" "Remove Wine" ;;
+            14) run_script "remove_simplenote.sh" "Remove Simplenote" ;;
+            15) run_script "remove_redshift.sh" "Remove Redshift" ;;
+            16) run_script "remove_xpad.sh" "Remove Xpad" ;;
+            17) run_script "fix_hostname_display.sh" "Fix Hostname Display" ;;
             0)  break ;;
-            *) echo -e "${RED}Invalid.${NC}"; sleep 1 ;;
+            *) echo -e "  ${RED}Invalid.${NC}"; sleep 1 ;;
         esac
     done
 }
@@ -246,22 +288,21 @@ menu_software() {
 menu_config() {
     while true; do
         show_header
-        echo -e "${MAGENTA}  CONFIGURATION${NC}"
+        show_section "CONFIGURATION"
         echo ""
-        echo -e "   ${YELLOW}1.${NC} Set wallpaper                  (random from wallpapers.txt)"
-        echo -e "   ${YELLOW}2.${NC} Manage wallpaper URLs          (add, remove, view)"
-        echo -e "   ${YELLOW}3.${NC} Restrict Chromium CPU          (limit to 50%)"
-        echo ""
-        echo -e "   ${RED}0.${NC} Back"
-        echo ""
-        read -p "  Choice [0-3]: " c
+        show_item "1" "🎨" "Set wallpaper" "random from list"
+        show_item "2" "🖼️" " Manage wallpaper URLs" "add, remove, view"
+        show_item "3" "⚙️" " Restrict Chromium CPU" "limit to 50%"
+        show_back
+        show_prompt
+        read c
         log_action "SUBMENU config: choice=$c"
         case $c in
             1) run_script "set_wallpaper.sh" "Set Wallpaper" ;;
             2) run_script "manage_wallpapers.sh" "Manage Wallpaper URLs" ;;
             3) run_script "restrict_chromium_cpu.sh" "Restrict Chromium CPU" ;;
             0) break ;;
-            *) echo -e "${RED}Invalid.${NC}"; sleep 1 ;;
+            *) echo -e "  ${RED}Invalid.${NC}"; sleep 1 ;;
         esac
     done
 }
@@ -269,27 +310,32 @@ menu_config() {
 menu_tools() {
     while true; do
         show_header
-        echo -e "${MAGENTA}  TOOLS${NC}"
+        show_section "TOOLS"
         echo ""
-        echo -e "   ${CYAN}--- REMOTE ---${NC}"
-        echo -e "   ${YELLOW}1.${NC} Run custom command             (execute anything on all hosts)"
-        echo -e "   ${YELLOW}2.${NC} Change remote password         (change SSH user password)"
+        show_subsection "Remote"
+        show_item "1" "💻" "Run custom command" "execute on all hosts"
+        show_item "2" "🔑" "Change remote password" "update SSH password"
+        show_item "3" "📂" "Copy file to all" "SCP to every host"
+        show_item "4" "🔒" "Lock all screens" "instant lock"
+        show_item "5" "💬" "Send message" "popup notification"
         echo ""
-        echo -e "   ${CYAN}--- FIX ---${NC}"
-        echo -e "   ${YELLOW}3.${NC} Delete SSH keys                (clean keys on this server)"
-        echo -e "   ${YELLOW}4.${NC} Fix slow sudo                  (add hostname to /etc/hosts)"
-        echo ""
-        echo -e "   ${RED}0.${NC} Back"
-        echo ""
-        read -p "  Choice [0-4]: " c
+        show_subsection "Fix"
+        show_item "6" "🗝️" " Delete SSH keys" "clean local keys"
+        show_item "7" "🐌" "Fix slow sudo" "hostname in /etc/hosts"
+        show_back
+        show_prompt
+        read c
         log_action "SUBMENU tools: choice=$c"
         case $c in
             1) run_script "run_remote_command.sh" "Run Custom Command" ;;
             2) run_script "change_password.sh" "Change Remote Password" ;;
-            3) run_script "delete_ssh_keys.sh" "Delete SSH Keys" ;;
-            4) run_script "fix_slow_sudo.sh" "Fix Slow Sudo" ;;
+            3) run_script "copy_file_to_all.sh" "Copy File to All Hosts" ;;
+            4) run_script "lock_screens.sh" "Lock All Screens" ;;
+            5) run_script "send_message.sh" "Send Message to All" ;;
+            6) run_script "delete_ssh_keys.sh" "Delete SSH Keys" ;;
+            7) run_script "fix_slow_sudo.sh" "Fix Slow Sudo" ;;
             0) break ;;
-            *) echo -e "${RED}Invalid.${NC}"; sleep 1 ;;
+            *) echo -e "  ${RED}Invalid.${NC}"; sleep 1 ;;
         esac
     done
 }
@@ -297,38 +343,37 @@ menu_tools() {
 menu_files() {
     while true; do
         show_header
-        echo -e "${MAGENTA}  FILE MANAGEMENT${NC}"
+        show_section "FILE MANAGEMENT"
         echo ""
-        echo -e "   ${YELLOW}1.${NC} Manage hosts.txt               (add, remove, fill ranges)"
-        echo -e "   ${YELLOW}2.${NC} View hosts.txt                 (display current host list)"
-        echo -e "   ${YELLOW}3.${NC} Edit hosts.txt                 (open in text editor)"
-        echo -e "   ${YELLOW}4.${NC} View README                    (show project documentation)"
-        echo ""
-        echo -e "   ${RED}0.${NC} Back"
-        echo ""
-        read -p "  Choice [0-4]: " c
+        show_item "1" "📋" "Manage hosts.txt" "add, remove, ranges"
+        show_item "2" "👁️" " View hosts.txt" "display host list"
+        show_item "3" "✏️" " Edit hosts.txt" "open in editor"
+        show_item "4" "📖" "View README" "project documentation"
+        show_item "5" "📜" "View log" "last 30 menu actions"
+        show_back
+        show_prompt
+        read c
         log_action "SUBMENU files: choice=$c"
         case $c in
             1) run_script "manage_hosts.sh" "Manage hosts.txt" ;;
             2)
                 show_header
-                echo -e "${GREEN}Contents of hosts.txt:${NC}"
+                echo -e "  ${GREEN}${BOLD}📋 Contents of hosts.txt:${NC}"
                 echo ""
-                if [ -f "./hosts.txt" ]; then cat -n ./hosts.txt; else echo -e "${RED}hosts.txt not found!${NC}"; fi
+                if [ -f "./hosts.txt" ]; then cat -n ./hosts.txt; else echo -e "  ${RED}hosts.txt not found!${NC}"; fi
                 pause
                 ;;
             3)
                 show_header
-                if [ -f "./hosts.txt" ]; then ${EDITOR:-nano} ./hosts.txt; else echo -e "${RED}hosts.txt not found!${NC}"; pause; fi
+                if [ -f "./hosts.txt" ]; then ${EDITOR:-nano} ./hosts.txt; else echo -e "  ${RED}hosts.txt not found!${NC}"; pause; fi
                 ;;
             4)
                 show_header
-                echo -e "${GREEN}README:${NC}"
-                echo ""
-                if [ -f "./README.md" ]; then less ./README.md; else echo -e "${RED}README.md not found!${NC}"; pause; fi
+                if [ -f "./README.md" ]; then less ./README.md; else echo -e "  ${RED}README.md not found!${NC}"; pause; fi
                 ;;
+            5) run_script "view_log.sh" "View Debug Log" ;;
             0) break ;;
-            *) echo -e "${RED}Invalid.${NC}"; sleep 1 ;;
+            *) echo -e "  ${RED}Invalid.${NC}"; sleep 1 ;;
         esac
     done
 }
@@ -337,24 +382,19 @@ menu_files() {
 
 while true; do
     show_header
-    HOST_COUNT=$(grep -v "^#" hosts.txt 2>/dev/null | grep -v "^$" | wc -l)
-    echo -e "${BLUE}  Hosts: ${HOST_COUNT}  |  Installed: ${INSTALLED}${NC}"
-    echo ""
-    echo -e "   ${YELLOW}1.${NC} System Updates & Maintenance"
-    echo -e "   ${YELLOW}2.${NC} Network"
-    echo -e "   ${YELLOW}3.${NC} Information & Reports"
-    echo -e "   ${YELLOW}4.${NC} Software"
-    echo -e "   ${YELLOW}5.${NC} Configuration"
-    echo -e "   ${YELLOW}6.${NC} Tools"
-    echo -e "   ${YELLOW}7.${NC} File Management"
-    echo -e "   ${YELLOW}8.${NC} Update Scripts"
-    echo ""
-    echo -e "   ${RED}0.${NC} Exit"
-    echo ""
-    echo -e "${CYAN}══════════════════════════════════════════════════════════════════${NC}"
-    read -p "  Choice [0-8]: " choice
+    show_subsection "Main Menu"
+    show_item "1" "🔄" "System Updates" "update, reboot, cleanup"
+    show_item "2" "🌐" "Network" "status, DNS, speed test"
+    show_item "3" "📊" "Information & Reports" "hardware, disk, uptime"
+    show_item "4" "📦" "Software" "install & remove apps"
+    show_item "5" "⚙️" " Configuration" "wallpaper, CPU limits"
+    show_item "6" "🛠️" " Tools" "remote commands, passwords"
+    show_item "7" "📁" "File Management" "hosts.txt, README"
+    show_item "8" "⬆️" " Update Scripts" "check for new version"
+    show_exit
+    show_prompt
+    read choice
     log_action "MAIN MENU: choice=$choice"
-    echo ""
 
     case $choice in
         1) menu_updates ;;
@@ -366,10 +406,10 @@ while true; do
         7) menu_files ;;
         8)
             show_header
-            echo -e "${GREEN}Running: Update Scripts${NC}"
+            echo -e "  ${GREEN}${BOLD}▶ Running:${NC} Update Scripts"
             echo ""
             log_action "RUN: update.sh"
-            if [ -f "./update.sh" ]; then bash ./update.sh; else echo -e "${RED}update.sh not found!${NC}"; fi
+            if [ -f "./update.sh" ]; then bash ./update.sh; else echo -e "  ${RED}update.sh not found!${NC}"; fi
             log_action "DONE: update.sh"
             pause
             ;;
@@ -377,25 +417,23 @@ while true; do
             log_action "MENU: 666 Watchdog Controls"
             while true; do
                 show_header
-                echo -e "${MAGENTA}╔════════════════════════════════════════════════════════════════╗${NC}"
-                echo -e "${MAGENTA}║     Security Watchdog Controls                                ║${NC}"
-                echo -e "${MAGENTA}╚════════════════════════════════════════════════════════════════╝${NC}"
+                echo -e "  ${MAGENTA}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+                echo -e "     ${MAGENTA}${BOLD}🛡️  Security Watchdog Controls${NC}"
+                echo -e "  ${MAGENTA}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
                 echo ""
-                echo -e "${MAGENTA}── Hosts (hosts.txt + credentials.conf) ──${NC}"
-                echo -e "   ${YELLOW}1.${NC} Install watchdog          (72h self-destruct if offline)"
-                echo -e "   ${YELLOW}2.${NC} Remove watchdog"
-                echo -e "   ${YELLOW}3.${NC} Check watchdog status"
-                echo -e "   ${YELLOW}4.${NC} Change watchdog ping hosts"
-                echo -e "   ${YELLOW}5.${NC} Change self-destruct timer (default 72h)"
+                show_subsection "Hosts (hosts.txt + credentials.conf)"
+                show_item "1" "📥" "Install watchdog" "72h timeout if offline"
+                show_item "2" "🗑️" " Remove watchdog" ""
+                show_item "3" "📡" "Check watchdog status" ""
+                show_item "4" "🎯" "Change ping hosts" ""
+                show_item "5" "⏱️" " Change timer" "default 72h"
                 echo ""
-                echo -e "${MAGENTA}── Additional server (ad-hoc, prompts for credentials) ──${NC}"
-                echo -e "   ${YELLOW}6.${NC} Install watchdog on additional server"
-                echo ""
-                echo -e "   ${RED}0.${NC} Back to main menu"
-                echo ""
-                read -p "  Choice [0-6]: " wc
+                show_subsection "Additional server (prompts for credentials)"
+                show_item "6" "🖥️" " Install on extra server" "ad-hoc install"
+                show_back
+                show_prompt
+                read wc
                 log_action "SUBMENU 666: choice=$wc"
-                echo ""
                 case $wc in
                     1) run_script "install_connectivity_watchdog.sh" "Install Watchdog" ;;
                     2) run_script "remove_connectivity_watchdog.sh" "Remove Watchdog" ;;
@@ -404,19 +442,19 @@ while true; do
                     5) run_script "change_watchdog_timer.sh" "Change Watchdog Timer" ;;
                     6) run_script "install_server_watchdog.sh" "Install Watchdog on Additional Server" ;;
                     0) break ;;
-                    *) echo -e "${RED}Invalid choice.${NC}"; sleep 1 ;;
+                    *) echo -e "  ${RED}Invalid.${NC}"; sleep 1 ;;
                 esac
             done
             ;;
         0)
             log_action "EXIT"
             show_header
-            echo -e "${GREEN}Goodbye!${NC}"
+            echo -e "  ${GREEN}${BOLD}  Goodbye! 👋${NC}"
             echo ""
             exit 0
             ;;
         *)
-            echo -e "${RED}Invalid choice.${NC}"
+            echo -e "  ${RED}Invalid choice.${NC}"
             sleep 1
             ;;
     esac
