@@ -1,6 +1,6 @@
 # Atomator - Remote Xubuntu Management
 
-Manage multiple Xubuntu computers remotely from a central Debian server via SSH. One menu, 37 scripts, full control.
+Manage multiple Xubuntu computers remotely from a central Debian server via SSH. One menu, 51 scripts, full control.
 
 ## Quick Start
 
@@ -12,7 +12,7 @@ sudo bash quick_install.sh
 bash /root/start.sh
 ```
 
-That's it. All 37 scripts are installed to `/remote_tools/`, ready to use.
+That's it. All 51 scripts are installed to `/remote_tools/`, ready to use.
 
 ---
 
@@ -513,10 +513,12 @@ After installation, `/remote_tools/` contains:
   change_password.sh               # Change remote password
   fix_slow_sudo.sh                 # Fix slow sudo (hostname in /etc/hosts)
   manage_hosts.sh                  # Manage hosts.txt
-  install_connectivity_watchdog.sh # Install network watchdog
+  install_connectivity_watchdog.sh # Install network watchdog (fleet hosts)
+  install_server_watchdog.sh       # Install watchdog on ad-hoc server (prompts for credentials)
   remove_connectivity_watchdog.sh  # Remove network watchdog
   check_watchdog_status.sh         # Check watchdog status
   configure_watchdog_hosts.sh      # Configure watchdog ping hosts
+  change_watchdog_timer.sh         # Change self-destruct timeout on all hosts
 
 /root/
   start.sh                         # Quick launcher: cd /remote_tools && bash menu.sh
@@ -528,6 +530,7 @@ After installation, `/remote_tools/` contains:
 
 | Version | Date | Changes |
 |---------|------|---------|
+| v.02.08.00 | 2026-05-24 | Parallel execution for all 6 maintenance scripts (5 hosts at once by default). Live clock in menu header. Paginated report viewer. Added change_watchdog_timer.sh and install_server_watchdog.sh. Watchdog submenu expanded to 6 options. |
 | v.02.07.04 | 2026-02-27 | Fix hostname display: proper restart without reboot - kills old conky cleanly then starts fresh. |
 | v.02.07.03 | 2026-02-27 | Fixed black background: enables Xfce compositor for true ARGB transparency on hostname display. |
 | v.02.07.02 | 2026-02-27 | Hostname display: black outline on white text, positioned closer to taskbar. |

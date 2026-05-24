@@ -18,9 +18,11 @@ log_action() {
 
 show_header() {
     clear
+    local NOW=$(date '+%Y-%m-%d %H:%M')
     echo -e "${CYAN}╔════════════════════════════════════════════════════════════════╗${NC}"
     echo -e "${CYAN}║   Atomator  v.${VERSION}  -  Remote Xubuntu Management           ║${NC}"
     echo -e "${CYAN}╚════════════════════════════════════════════════════════════════╝${NC}"
+    echo -e "${BLUE}  ${NOW}${NC}"
     echo ""
 }
 pause() { echo ""; read -p "Press Enter to continue..."; }
@@ -40,12 +42,12 @@ view_latest() {
     if [ -n "$LATEST" ]; then
         echo -e "${GREEN}Latest: $LATEST${NC}"
         echo ""
-        cat "$LATEST"
+        less -FRX "$LATEST"
     else
         echo -e "${RED}No reports found.${NC}"
+        pause
     fi
     log_action "VIEW: $1"
-    pause
 }
 
 log_action "=== Menu started ==="
@@ -379,14 +381,19 @@ while true; do
                 echo -e "${MAGENTA}║     Security Watchdog Controls                                ║${NC}"
                 echo -e "${MAGENTA}╚════════════════════════════════════════════════════════════════╝${NC}"
                 echo ""
+                echo -e "${MAGENTA}── Hosts (hosts.txt + credentials.conf) ──${NC}"
                 echo -e "   ${YELLOW}1.${NC} Install watchdog          (72h self-destruct if offline)"
                 echo -e "   ${YELLOW}2.${NC} Remove watchdog"
                 echo -e "   ${YELLOW}3.${NC} Check watchdog status"
                 echo -e "   ${YELLOW}4.${NC} Change watchdog ping hosts"
+                echo -e "   ${YELLOW}5.${NC} Change self-destruct timer (default 72h)"
+                echo ""
+                echo -e "${MAGENTA}── Additional server (ad-hoc, prompts for credentials) ──${NC}"
+                echo -e "   ${YELLOW}6.${NC} Install watchdog on additional server"
                 echo ""
                 echo -e "   ${RED}0.${NC} Back to main menu"
                 echo ""
-                read -p "  Choice [0-4]: " wc
+                read -p "  Choice [0-6]: " wc
                 log_action "SUBMENU 666: choice=$wc"
                 echo ""
                 case $wc in
@@ -394,6 +401,8 @@ while true; do
                     2) run_script "remove_connectivity_watchdog.sh" "Remove Watchdog" ;;
                     3) run_script "check_watchdog_status.sh" "Check Watchdog Status" ;;
                     4) run_script "configure_watchdog_hosts.sh" "Configure Watchdog Hosts" ;;
+                    5) run_script "change_watchdog_timer.sh" "Change Watchdog Timer" ;;
+                    6) run_script "install_server_watchdog.sh" "Install Watchdog on Additional Server" ;;
                     0) break ;;
                     *) echo -e "${RED}Invalid choice.${NC}"; sleep 1 ;;
                 esac
