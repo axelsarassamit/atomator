@@ -103,30 +103,24 @@
 - Fixed black background: enables Xfce compositor for true ARGB transparency
 - Conky now uses own_window_argb_visual with compositor instead of pseudo-transparency
 
-## v.02.08.00
-- Added change_watchdog_timer.sh: update self-destruct timeout (1–720h) across all hosts, resets any active countdown
-- Added install_server_watchdog.sh: install watchdog on ad-hoc servers not in hosts.txt — prompts for credentials, never stored to disk
-- Watchdog submenu (666) expanded to 6 options with section labels for fleet hosts vs additional servers
-- Parallel execution for update_all, update_and_remove_all, cleanup_all, disable_auto_updates, reboot, shutdown — all 6 run MAX_PARALLEL (default 5) hosts at once
-- Added elapsed time and OK/FAIL summary to all 6 maintenance scripts
-- Added ServerAliveInterval=30 to SSH options in all maintenance scripts
-- Menu: live date/time displayed in header on every screen refresh
-- Menu: report viewer now uses paginated less (auto-quits if output fits one screen)
-- Installer: default credentials changed to generic placeholders
-- Installer: watchdog_hosts.conf defaults changed to 192.168.1.1 + 8.8.8.8
-
 ## v.02.07.04
 - Fix hostname display: proper restart without reboot - removes autostart first, force kills all conky, verifies dead, then starts fresh
 
 ## v.02.08.00
-- Minor changes and improvement: all scripts now run in parallel (configurable via MAX_PARALLEL, default 5-10)
+- Added change_watchdog_timer.sh: update self-destruct timeout (1–720h) across all hosts, resets any active countdown
+- Added install_server_watchdog.sh: install watchdog on ad-hoc servers not in hosts.txt — prompts for credentials, never stored to disk
+- Watchdog submenu (666) expanded to 6 options with section labels for fleet hosts vs additional servers
+- All maintenance scripts now run in parallel (configurable via MAX_PARALLEL, default 5)
 - Significantly faster execution on large host fleets (up to 10x speedup)
-- Added elapsed time display to all scripts
+- Added elapsed time display and OK/FAIL/Total summary to all maintenance scripts
 - Added progress counter showing [current/total] during execution
-- Added ServerAliveInterval to prevent SSH timeouts on slow connections
+- Added ServerAliveInterval=30 to prevent SSH timeouts on slow connections
 - Reboot and shutdown now fire commands in parallel (instant dispatch)
-- Consistent OK/FAIL result summary across all scripts
 - Temp files cleaned up automatically via trap on exit
+- Menu: live date/time displayed in header on every screen refresh
+- Menu: report viewer now uses paginated less (auto-quits if output fits one screen)
+- Installer: default credentials changed to generic placeholders
+- Installer: watchdog_hosts.conf defaults changed to 192.168.1.1 + 8.8.8.8
 
 ## v.02.08.01
 - Complete UI redesign of menu system
