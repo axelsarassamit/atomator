@@ -17,14 +17,19 @@ A command-line tool for managing fleets of Debian-based Linux computers from a s
 ## Quick Start
 
 ```bash
-# On your Debian server (as root):
+# 1. Download the installer (must use the raw URL — not the GitHub page URL):
+curl -L https://raw.githubusercontent.com/axelsarassamit/atomator/main/quick_install.sh -o quick_install.sh
+
+# 2. Run it as root:
 sudo bash quick_install.sh
 
-# Start the menu:
+# 3. Start the menu:
 bash /root/start.sh
 ```
 
 That's it. All scripts are installed to `/remote_tools/`, ready to use.
+
+> ⚠️ **Common mistake:** Do NOT right-click → "Save link as" from the GitHub page, and do not use the blob URL (`github.com/.../blob/...`). Always use the `raw.githubusercontent.com` URL above or the `curl` command — otherwise you download an HTML page and get a `syntax error near unexpected token 'newline'` error.
 
 ---
 
@@ -65,6 +70,8 @@ That's it. All scripts are installed to `/remote_tools/`, ready to use.
 **Fresh install:**
 
 ```bash
+# Download the raw installer (NOT the GitHub page URL):
+curl -L https://raw.githubusercontent.com/axelsarassamit/atomator/main/quick_install.sh -o quick_install.sh
 sudo bash quick_install.sh
 ```
 
