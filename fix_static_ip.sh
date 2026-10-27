@@ -1,10 +1,15 @@
 #!/bin/bash
+# Deployment templates are inert until configure_site.py creates a configured bundle.
+if [[ "${SITE_CONFIGURATION_CONFIRMED:-}" != "1" ]]; then
+    printf '%s\n' 'No site configured. Use configure_site.py with explicit site settings before running this script.' >&2
+    exit 64
+fi
 set +e
 source ./credentials.conf 2>/dev/null || { echo "ERROR: credentials.conf not found!"; exit 1; }
 echo "=== Fix Static IP ==="
 echo "Sets static IP based on gateway + hostname."
 echo "IP = gateway first 3 octets + last digits of hostname."
-echo "Example: gateway 192.168.1.1 + hostname BKSAL058 = 192.168.1.58/24"
+echo "Example: gateway 192.0.2.2 + hostname SITE1AL058 = 192.0.2.6/24"
 echo ""
 echo "DNS for static IP:"
 echo "  1. Keep current DNS from each host"
@@ -21,7 +26,7 @@ case $dns_choice in
         ;;
     3)
         echo ""
-        read -p "Enter DNS servers (space-separated, e.g. 10.0.0.5 1.1.1.1): " CUSTOM_DNS
+        read -p "Enter DNS servers (space-separated, e.g. 192.0.2.1 1.1.1.1): " CUSTOM_DNS
         if [ -z "$CUSTOM_DNS" ]; then echo "No DNS entered. Cancelled."; exit 1; fi
         DNS_OVERRIDE="$CUSTOM_DNS"
         echo "Using: $DNS_OVERRIDE"
@@ -34,7 +39,7 @@ esac
 echo ""
 for host in $(grep -v "^#" hosts.txt | grep -v "^$"); do
     echo "[$host] Setting static IP..."
-    sshpass -p "$SSH_PASS" ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$SSH_USER"@"$host" \
+    SSHPASS="${SSH_PASSWORD:?Set SSH_PASSWORD}" sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$SSH_USER"@"$host" \
         'echo '"$SSH_PASS"' | sudo -S bash -c "
         DEV=\$(nmcli -t -f DEVICE,TYPE device | grep ethernet | head -1 | cut -d: -f1)
         CON_NAME=\$(nmcli -t -f NAME,TYPE connection show --active | grep ethernet | head -1 | cut -d: -f1)

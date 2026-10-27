@@ -1,4 +1,9 @@
 #!/bin/bash
+# Deployment templates are inert until configure_site.py creates a configured bundle.
+if [[ "${SITE_CONFIGURATION_CONFIRMED:-}" != "1" ]]; then
+    printf '%s\n' 'No site configured. Use configure_site.py with explicit site settings before running this script.' >&2
+    exit 64
+fi
 
 # Installation script for Remote Xubuntu Management Scripts
 # Run this on your new server to create all scripts in /remote_tools/
@@ -46,13 +51,9 @@ Quick start:
 The installer script can be found on your original server if you need to reinstall.
 INSTALLER_README
 
-echo "Scripts will be created with the following credentials:"
-echo "  SSH User: sweetagent"
-echo "  SSH Password: sweetcom"
-echo "  Sudo Password: sweetcom"
-echo ""
-echo "IMPORTANT: These credentials are hardcoded in all scripts."
-echo "Make sure to secure /remote_tools with: chmod 700 /remote_tools"
+echo "Use the account configured in your independent deployment bundle."
+echo "Supply SSH_PASSWORD at runtime; no password is distributed or displayed."
+echo "Keep deployment files private with: chmod 700 /remote_tools"
 echo ""
 
 read -p "Press Enter to continue or Ctrl+C to cancel..."

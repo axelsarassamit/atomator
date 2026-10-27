@@ -1,4 +1,9 @@
 #!/bin/bash
+# Deployment templates are inert until configure_site.py creates a configured bundle.
+if [[ "${SITE_CONFIGURATION_CONFIRMED:-}" != "1" ]]; then
+    printf '%s\n' 'No site configured. Use configure_site.py with explicit site settings before running this script.' >&2
+    exit 64
+fi
 
 # Script to create all remote management scripts
 # This allows easy deployment to another server
@@ -13,9 +18,9 @@ echo ""
 cat > hosts.txt << 'EOF'
 # Add your Xubuntu host IPs here, one per line
 # Example:
-# 192.168.1.50
-# 192.168.1.51
-# 192.168.1.52
+# 192.0.2.3
+# 192.0.2.4
+# 192.0.2.5
 EOF
 echo "✓ Created hosts.txt template"
 
@@ -35,7 +40,7 @@ set +e
 for host in $(grep -v "^#" hosts.txt | grep -v "^$")
 do
     echo "Processing $host..."
-    sshpass -p 'sweetcom' ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 sweetagent@"$host" 'echo sweetcom | sudo -S bash -c "apt update && apt upgrade -y && apt autoremove -y && apt autoclean"' || true
+    SSHPASS="${SSH_PASSWORD:?Set SSH_PASSWORD}" sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 exampleuser@"$host" 'sudo -n bash -c "apt update && apt upgrade -y && apt autoremove -y && apt autoclean"' || true
     if [ $? -eq 0 ]; then
         echo "$host: SUCCESS"
     else
@@ -54,7 +59,7 @@ set +e
 for host in $(grep -v "^#" hosts.txt | grep -v "^$")
 do
     echo "Processing $host..."
-    sshpass -p 'sweetcom' ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 sweetagent@"$host" 'echo sweetcom | sudo -S bash -c "apt update && apt upgrade -y && apt autoremove -y --purge && apt autoclean"' || true
+    SSHPASS="${SSH_PASSWORD:?Set SSH_PASSWORD}" sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 exampleuser@"$host" 'sudo -n bash -c "apt update && apt upgrade -y && apt autoremove -y --purge && apt autoclean"' || true
     if [ $? -eq 0 ]; then
         echo "$host: SUCCESS"
     else
@@ -74,7 +79,7 @@ set +e
 for host in $(grep -v "^#" hosts.txt | grep -v "^$")
 do
     echo "Processing $host..."
-    sshpass -p 'sweetcom' ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 sweetagent@"$host" 'echo sweetcom | sudo -S bash -c "
+    SSHPASS="${SSH_PASSWORD:?Set SSH_PASSWORD}" sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 exampleuser@"$host" 'sudo -n bash -c "
         echo \"Disabling automatic updates...\"
 
         # Stop and disable unattended-upgrades service
@@ -129,35 +134,35 @@ set +e
 for host in $(grep -v "^#" hosts.txt | grep -v "^$")
 do
     echo "Processing $host..."
-    sshpass -p 'sweetcom' ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 sweetagent@"$host" 'echo sweetcom | sudo -S bash -c "
+    SSHPASS="${SSH_PASSWORD:?Set SSH_PASSWORD}" sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 exampleuser@"$host" 'sudo -n bash -c "
         echo \"Cleaning up system on $host...\"
 
-        # Clean trash for sweetagent user
+        # Clean trash for exampleuser user
         echo \"Emptying trash...\"
-        rm -rf /home/sweetagent/.local/share/Trash/files/* 2>/dev/null
-        rm -rf /home/sweetagent/.local/share/Trash/info/* 2>/dev/null
+        rm -rf /home/exampleuser/.local/share/Trash/files/* 2>/dev/null
+        rm -rf /home/exampleuser/.local/share/Trash/info/* 2>/dev/null
 
         # Clean browser cache (Chromium)
         echo \"Cleaning Chromium cache...\"
-        rm -rf /home/sweetagent/.cache/chromium/* 2>/dev/null
+        rm -rf /home/exampleuser/.cache/chromium/* 2>/dev/null
 
         # Clean browser cache (Firefox)
         echo \"Cleaning Firefox cache...\"
-        rm -rf /home/sweetagent/.cache/mozilla/* 2>/dev/null
+        rm -rf /home/exampleuser/.cache/mozilla/* 2>/dev/null
 
         # Clean thumbnail cache
         echo \"Cleaning thumbnail cache...\"
-        rm -rf /home/sweetagent/.cache/thumbnails/* 2>/dev/null
+        rm -rf /home/exampleuser/.cache/thumbnails/* 2>/dev/null
 
         # Clean temporary files
         echo \"Cleaning temporary files...\"
-        rm -rf /home/sweetagent/.cache/tmp/* 2>/dev/null
-        rm -rf /home/sweetagent/tmp/* 2>/dev/null
-        rm -rf /home/sweetagent/.tmp/* 2>/dev/null
+        rm -rf /home/exampleuser/.cache/tmp/* 2>/dev/null
+        rm -rf /home/exampleuser/tmp/* 2>/dev/null
+        rm -rf /home/exampleuser/.tmp/* 2>/dev/null
 
         # Clean old log files in home directory
         echo \"Cleaning old log files...\"
-        find /home/sweetagent -name \"*.log\" -type f -mtime +30 -delete 2>/dev/null
+        find /home/exampleuser -name \"*.log\" -type f -mtime +30 -delete 2>/dev/null
 
         # Clean APT cache
         echo \"Cleaning APT cache...\"
@@ -200,7 +205,7 @@ set +e
 for host in $(grep -v "^#" hosts.txt | grep -v "^$")
 do
     echo "Rebooting $host..."
-    sshpass -p 'sweetcom' ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 sweetagent@"$host" 'echo sweetcom | sudo -S reboot' || true
+    SSHPASS="${SSH_PASSWORD:?Set SSH_PASSWORD}" sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 exampleuser@"$host" 'sudo -n reboot' || true
     echo "$host: Reboot command sent"
 done
 echo "All hosts sent reboot command."

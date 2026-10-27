@@ -1,4 +1,9 @@
 #!/bin/bash
+# Deployment templates are inert until configure_site.py creates a configured bundle.
+if [[ "${SITE_CONFIGURATION_CONFIRMED:-}" != "1" ]]; then
+    printf '%s\n' 'No site configured. Use configure_site.py with explicit site settings before running this script.' >&2
+    exit 64
+fi
 set +e
 
 echo "=== Removing Connectivity Watchdog TEST MODE ==="
@@ -7,7 +12,7 @@ echo ""
 for host in $(grep -v "^#" hosts.txt | grep -v "^$")
 do
     echo "Processing $host..."
-    sshpass -p 'sweetcom' ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 sweetagent@"$host" 'echo sweetcom | sudo -S bash -c "
+    SSHPASS="${SSH_PASSWORD:?Set SSH_PASSWORD}" sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 exampleuser@"$host" 'sudo -n bash -c "
         echo \"Removing Connectivity Watchdog TEST MODE...\"
 
         # Stop and disable timer
