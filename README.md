@@ -459,3 +459,10 @@ All scripts follow the same structure:
 | v.02.01.00 | 2026-02-24 | Renamed to "Atomator". New version format v.XX.YY.AA. Credentials system (`credentials.conf`) replaces hardcoded passwords. Password change script. Debug menu logging. Update catalog with version revert. Changelog display on updates. Wallpaper management script. Watchdog host configuration. View README from menu. Fixed: sudo command not found in update menu. |
 | v.02.00.00 | 2026-02-23 | Submenu system (8 categories), report viewers for all data collectors, GitHub update support, delete SSH keys now local-only, timestamped output files for disk/uptime/services scripts. |
 | v.01.00.00 | 2026-02-23 | Complete rewrite. 34 scripts, new menu with descriptions, version system, update mechanism. Added shutdown, disk space, uptime, services scripts. Consistent error handling across all scripts. |
+
+## Licensing
+
+This project's original code is licensed under the [MIT License](LICENSE),
+including commercial use, modification and redistribution with preservation of
+the copyright and license notice. Third-party materials retain their own terms.
+Project names and branding are not licensed as trademarks by this grant.
