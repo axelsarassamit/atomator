@@ -1,10 +1,15 @@
 #!/bin/bash
+# Deployment templates are inert until configure_site.py creates a configured bundle.
+if [[ "${SITE_CONFIGURATION_CONFIRMED:-}" != "1" ]]; then
+    printf '%s\n' 'No site configured. Use configure_site.py with explicit site settings before running this script.' >&2
+    exit 64
+fi
 set +e
 
 echo "=== Installing Connectivity Watchdog (TEST MODE - No Wipe) ==="
 echo ""
 echo "This TEST version will:"
-echo "  - Monitor connectivity to 192.168.1.242 and ntp.sweetserver.wan"
+echo "  - Monitor connectivity to 192.0.2.7 and time.example.invalid"
 echo "  - Start a 72-hour countdown if both are unreachable"
 echo "  - LOG what would happen but NOT actually wipe the system"
 echo "  - Use a 5-minute timeout for faster testing (instead of 72 hours)"
@@ -24,8 +29,8 @@ cat > /usr/local/bin/connectivity-watchdog-test.sh << 'WATCHDOG'
 #!/bin/bash
 
 # Connectivity check targets
-PRIMARY_HOST="192.168.1.242"
-SECONDARY_HOST="ntp.sweetserver.wan"
+PRIMARY_HOST="192.0.2.7"
+SECONDARY_HOST="time.example.invalid"
 
 # TEST MODE: 5 minutes instead of 72 hours for faster testing
 TIMEOUT_SECONDS=300
@@ -217,7 +222,7 @@ echo ""
 echo "TEST SETTINGS:"
 echo "  - Timeout: 5 minutes (instead of 72 hours)"
 echo "  - Check interval: 30 seconds (instead of 5 minutes)"
-echo "  - Monitoring: 192.168.1.242 and ntp.sweetserver.wan"
+echo "  - Monitoring: 192.0.2.7 and time.example.invalid"
 echo "  - Action on timeout: LOG ONLY (no actual wipe)"
 echo ""
 echo "Check status: sudo /usr/local/bin/watchdog-test-status.sh"
@@ -231,10 +236,10 @@ do
     echo "Processing $host..."
 
     # Upload script to remote host
-    sshpass -p 'sweetcom' scp -o StrictHostKeyChecking=no "$LOCAL_SCRIPT" sweetagent@"$host":"$REMOTE_SCRIPT" || true
+    SSHPASS="${SSH_PASSWORD:?Set SSH_PASSWORD}" sshpass -e scp -o StrictHostKeyChecking=no "$LOCAL_SCRIPT" exampleuser@"$host":"$REMOTE_SCRIPT" || true
 
     # Execute with sudo and cleanup
-    sshpass -p 'sweetcom' ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 sweetagent@"$host" "echo sweetcom | sudo -S bash $REMOTE_SCRIPT && rm -f $REMOTE_SCRIPT" || true
+    SSHPASS="${SSH_PASSWORD:?Set SSH_PASSWORD}" sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 exampleuser@"$host" "sudo -n bash $REMOTE_SCRIPT && rm -f $REMOTE_SCRIPT" || true
 
     if [ $? -eq 0 ]; then
         echo "$host: SUCCESS"
@@ -254,10 +259,10 @@ echo "📊 MONITORING TEST MODE:"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
 echo "Check status on any host:"
-echo "  ssh sweetagent@HOST 'echo sweetcom | sudo -S /usr/local/bin/watchdog-test-status.sh'"
+echo "  ssh exampleuser@HOST 'sudo -n /usr/local/bin/watchdog-test-status.sh'"
 echo ""
 echo "Watch live logs on any host:"
-echo "  ssh sweetagent@HOST 'tail -f /var/log/connectivity-watchdog-test.log'"
+echo "  ssh exampleuser@HOST 'tail -f /var/log/connectivity-watchdog-test.log'"
 echo ""
 echo "To test the countdown:"
 echo "  1. Disconnect the network cable or disable network"

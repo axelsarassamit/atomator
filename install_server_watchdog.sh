@@ -1,4 +1,9 @@
 #!/bin/bash
+# Deployment templates are inert until configure_site.py creates a configured bundle.
+if [[ "${SITE_CONFIGURATION_CONFIRMED:-}" != "1" ]]; then
+    printf '%s\n' 'No site configured. Use configure_site.py with explicit site settings before running this script.' >&2
+    exit 64
+fi
 set +e
 source ./watchdog_hosts.conf 2>/dev/null || { echo "ERROR: watchdog_hosts.conf not found!"; exit 1; }
 
@@ -32,7 +37,7 @@ read -p "  SSH username [default: root]: " SERVER_USER
 read -s -p "  SSH password for ${SERVER_USER}: " SERVER_PASS
 echo ""
 if [ -z "$SERVER_PASS" ]; then
-    echo -e "${RED}Password cannot be empty.${NC}"
+echo "Credentials are supplied locally and are not displayed."
     exit 1
 fi
 echo ""
@@ -151,7 +156,7 @@ sed -i "s/__HOST_3__/$HOST_3/g" "$LOCAL_SCRIPT"
 OK_COUNT=0; FAIL_COUNT=0
 for server in "${SERVERS[@]}"; do
     echo "[$server] Installing watchdog..."
-    sshpass -p "$SERVER_PASS" scp -o StrictHostKeyChecking=no "$LOCAL_SCRIPT" "$SERVER_USER"@"$server":"$REMOTE_SCRIPT" 2>/dev/null
+    SSHPASS="${SSH_PASSWORD:?Set SSH_PASSWORD}" sshpass -e scp -o StrictHostKeyChecking=no "$LOCAL_SCRIPT" "$SERVER_USER"@"$server":"$REMOTE_SCRIPT" 2>/dev/null
     if [ $? -ne 0 ]; then
         echo -e "[$server] ${RED}FAILED${NC} (scp - check credentials/connectivity)"
         FAIL_COUNT=$((FAIL_COUNT + 1))
@@ -162,7 +167,7 @@ for server in "${SERVERS[@]}"; do
     else
         REMOTE_CMD="echo '$SERVER_PASS' | sudo -S bash $REMOTE_SCRIPT && rm -f $REMOTE_SCRIPT"
     fi
-    sshpass -p "$SERVER_PASS" ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$SERVER_USER"@"$server" \
+    SSHPASS="${SSH_PASSWORD:?Set SSH_PASSWORD}" sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$SERVER_USER"@"$server" \
         "$REMOTE_CMD" 2>&1 \
         && { echo -e "[$server] ${GREEN}OK${NC}"; OK_COUNT=$((OK_COUNT + 1)); } \
         || { echo -e "[$server] ${RED}FAILED${NC}"; FAIL_COUNT=$((FAIL_COUNT + 1)); }

@@ -44,7 +44,7 @@
 
 ## v.02.03.00
 - fix_static_ip.sh now derives IP from gateway + hostname digits
-- IP = gateway first 3 octets + last digits of computer name (e.g. BKSAL058 = .58)
+- IP = gateway first 3 octets + last digits of computer name (e.g. SITE1AL058 = .58)
 - Subnet mask /24, validates hostname has trailing digits and octet <= 254
 
 ## v.02.03.01
@@ -120,7 +120,7 @@
 - Menu: live date/time displayed in header on every screen refresh
 - Menu: report viewer now uses paginated less (auto-quits if output fits one screen)
 - Installer: default credentials changed to generic placeholders
-- Installer: watchdog_hosts.conf defaults changed to 192.168.1.1 + 8.8.8.8
+- Installer: watchdog_hosts.conf defaults changed to 192.0.2.2 + 8.8.8.8
 
 ## v.02.08.01
 - Complete UI redesign of menu system

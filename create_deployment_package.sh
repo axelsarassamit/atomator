@@ -1,4 +1,9 @@
 #!/bin/bash
+# Deployment templates are inert until configure_site.py creates a configured bundle.
+if [[ "${SITE_CONFIGURATION_CONFIRMED:-}" != "1" ]]; then
+    printf '%s\n' 'No site configured. Use configure_site.py with explicit site settings before running this script.' >&2
+    exit 64
+fi
 
 # Script to create a deployment package with all scripts
 # This creates a tar.gz archive that can be transferred to another server
@@ -21,9 +26,9 @@ if [ ! -f "$TEMP_DIR/hosts.txt" ]; then
     cat > "$TEMP_DIR/hosts.txt" << 'EOF'
 # Add your Xubuntu host IPs here, one per line
 # Example:
-# 192.168.1.50
-# 192.168.1.51
-# 192.168.1.52
+# 192.0.2.3
+# 192.0.2.4
+# 192.0.2.5
 EOF
 fi
 
@@ -130,9 +135,9 @@ Utilities:
 === Support ===
 
 All scripts use:
-  - SSH User: sweetagent
-  - SSH Password: sweetcom
-  - Sudo Password: sweetcom
+  - SSH User: exampleuser
+  - SSH Password: ${SITE_PASSWORD:?Set SITE_PASSWORD explicitly}
+  - Sudo Password: ${SITE_PASSWORD:?Set SITE_PASSWORD explicitly}
 
 For detailed documentation, see README.md
 

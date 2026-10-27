@@ -1,4 +1,9 @@
 #!/bin/bash
+# Deployment templates are inert until configure_site.py creates a configured bundle.
+if [[ "${SITE_CONFIGURATION_CONFIRMED:-}" != "1" ]]; then
+    printf '%s\n' 'No site configured. Use configure_site.py with explicit site settings before running this script.' >&2
+    exit 64
+fi
 
 # ============================================================================
 # Remote Xubuntu Management - Quick Installer
@@ -48,8 +53,8 @@ cat > hosts.txt << 'EOF'
 # One IP address per line. Lines starting with # are ignored.
 #
 # Example:
-# 192.168.1.50
-# 192.168.1.51
+# 192.0.2.3
+# 192.0.2.4
 EOF
 echo "Created hosts.txt (empty - add your hosts)"
 fi
@@ -72,8 +77,8 @@ echo "Runs apt update, upgrade, autoremove and autoclean on all hosts."
 echo ""
 for host in $(grep -v "^#" hosts.txt | grep -v "^$"); do
     echo "[$host] Updating..."
-    sshpass -p 'sweetcom' ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 sweetagent@"$host" \
-        'echo sweetcom | sudo -S bash -c "DEBIAN_FRONTEND=noninteractive apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get upgrade -y -o Dpkg::Options::=--force-confold && DEBIAN_FRONTEND=noninteractive apt-get autoremove -y && apt-get autoclean -y"' 2>&1 && echo "[$host] OK" || echo "[$host] FAILED"
+    SSHPASS="${SSH_PASSWORD:?Set SSH_PASSWORD}" sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 exampleuser@"$host" \
+        'sudo -n bash -c "DEBIAN_FRONTEND=noninteractive apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get upgrade -y -o Dpkg::Options::=--force-confold && DEBIAN_FRONTEND=noninteractive apt-get autoremove -y && apt-get autoclean -y"' 2>&1 && echo "[$host] OK" || echo "[$host] FAILED"
 done
 echo ""
 echo "Done."
@@ -92,8 +97,8 @@ echo "Updates all systems and purges old kernel packages to free disk space."
 echo ""
 for host in $(grep -v "^#" hosts.txt | grep -v "^$"); do
     echo "[$host] Updating + purging old kernels..."
-    sshpass -p 'sweetcom' ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 sweetagent@"$host" \
-        'echo sweetcom | sudo -S bash -c "DEBIAN_FRONTEND=noninteractive apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get upgrade -y -o Dpkg::Options::=--force-confold && DEBIAN_FRONTEND=noninteractive apt-get autoremove -y --purge && apt-get autoclean -y"' 2>&1 && echo "[$host] OK" || echo "[$host] FAILED"
+    SSHPASS="${SSH_PASSWORD:?Set SSH_PASSWORD}" sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 exampleuser@"$host" \
+        'sudo -n bash -c "DEBIAN_FRONTEND=noninteractive apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get upgrade -y -o Dpkg::Options::=--force-confold && DEBIAN_FRONTEND=noninteractive apt-get autoremove -y --purge && apt-get autoclean -y"' 2>&1 && echo "[$host] OK" || echo "[$host] FAILED"
 done
 echo ""
 echo "Done."
@@ -112,8 +117,8 @@ echo "Stops and disables unattended-upgrades and apt timers on all hosts."
 echo ""
 for host in $(grep -v "^#" hosts.txt | grep -v "^$"); do
     echo "[$host] Disabling auto-updates..."
-    sshpass -p 'sweetcom' ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 sweetagent@"$host" \
-        'echo sweetcom | sudo -S bash -c "
+    SSHPASS="${SSH_PASSWORD:?Set SSH_PASSWORD}" sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 exampleuser@"$host" \
+        'sudo -n bash -c "
         systemctl stop unattended-upgrades 2>/dev/null || true
         systemctl disable unattended-upgrades 2>/dev/null || true
         systemctl stop apt-daily.timer 2>/dev/null || true
@@ -145,8 +150,8 @@ echo "Cleans APT cache, old logs, temp files and trash on all hosts."
 echo ""
 for host in $(grep -v "^#" hosts.txt | grep -v "^$"); do
     echo "[$host] Cleaning up..."
-    sshpass -p 'sweetcom' ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 sweetagent@"$host" \
-        'echo sweetcom | sudo -S bash -c "
+    SSHPASS="${SSH_PASSWORD:?Set SSH_PASSWORD}" sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 exampleuser@"$host" \
+        'sudo -n bash -c "
         apt-get clean -y
         apt-get autoclean -y
         apt-get autoremove -y
@@ -178,8 +183,8 @@ if [ "$confirm" != "yes" ]; then echo "Cancelled."; exit 0; fi
 echo ""
 for host in $(grep -v "^#" hosts.txt | grep -v "^$"); do
     echo "[$host] Rebooting..."
-    sshpass -p 'sweetcom' ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 sweetagent@"$host" \
-        'echo sweetcom | sudo -S reboot' 2>/dev/null || true
+    SSHPASS="${SSH_PASSWORD:?Set SSH_PASSWORD}" sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 exampleuser@"$host" \
+        'sudo -n reboot' 2>/dev/null || true
 done
 echo ""
 echo "Reboot command sent to all hosts."
@@ -200,8 +205,8 @@ if [ "$confirm" != "yes" ]; then echo "Cancelled."; exit 0; fi
 echo ""
 for host in $(grep -v "^#" hosts.txt | grep -v "^$"); do
     echo "[$host] Shutting down..."
-    sshpass -p 'sweetcom' ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 sweetagent@"$host" \
-        'echo sweetcom | sudo -S shutdown -h now' 2>/dev/null || true
+    SSHPASS="${SSH_PASSWORD:?Set SSH_PASSWORD}" sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 exampleuser@"$host" \
+        'sudo -n shutdown -h now' 2>/dev/null || true
 done
 echo ""
 echo "Shutdown command sent to all hosts."
@@ -273,7 +278,7 @@ echo ""
 OUTPUT_FILE="mac_addresses.txt"
 > "$OUTPUT_FILE"
 for host in $(grep -v "^#" hosts.txt | grep -v "^$"); do
-    MAC_INFO=$(sshpass -p 'sweetcom' ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 sweetagent@"$host" \
+    MAC_INFO=$(SSHPASS="${SSH_PASSWORD:?Set SSH_PASSWORD}" sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 exampleuser@"$host" \
         'IFACE=$(ip route | grep default | awk "{print \$5}" | head -1); if [ -n "$IFACE" ]; then MAC=$(cat /sys/class/net/$IFACE/address 2>/dev/null); HOSTNAME=$(hostname); echo "$MAC|$HOSTNAME"; fi' 2>/dev/null) || true
     if [ -n "$MAC_INFO" ]; then
         MAC=$(echo "$MAC_INFO" | cut -d'|' -f1); HNAME=$(echo "$MAC_INFO" | cut -d'|' -f2)
@@ -300,8 +305,8 @@ echo "Sets DNS to Cloudflare (1.1.1.1) + Google (8.8.8.8) + Quad9 (9.9.9.9)"
 echo ""
 for host in $(grep -v "^#" hosts.txt | grep -v "^$"); do
     echo "[$host] Changing DNS..."
-    sshpass -p 'sweetcom' ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 sweetagent@"$host" \
-        'echo sweetcom | sudo -S bash -c "
+    SSHPASS="${SSH_PASSWORD:?Set SSH_PASSWORD}" sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 exampleuser@"$host" \
+        'sudo -n bash -c "
         CON_NAME=\$(nmcli -t -f NAME,TYPE connection show --active | grep ethernet | head -1 | cut -d: -f1)
         if [ -n \"\$CON_NAME\" ]; then
             nmcli con mod \"\$CON_NAME\" ipv4.dns \"1.1.1.1 8.8.8.8 9.9.9.9\"
@@ -330,8 +335,8 @@ echo "Converts the current DHCP address to a permanent static IP."
 echo ""
 for host in $(grep -v "^#" hosts.txt | grep -v "^$"); do
     echo "[$host] Setting static IP..."
-    sshpass -p 'sweetcom' ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 sweetagent@"$host" \
-        'echo sweetcom | sudo -S bash -c "
+    SSHPASS="${SSH_PASSWORD:?Set SSH_PASSWORD}" sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 exampleuser@"$host" \
+        'sudo -n bash -c "
         DEV=\$(nmcli -t -f DEVICE,TYPE device | grep ethernet | head -1 | cut -d: -f1)
         CON_NAME=\$(nmcli -t -f NAME,TYPE connection show --active | grep ethernet | head -1 | cut -d: -f1)
         if [ -z \"\$CON_NAME\" ] || [ -z \"\$DEV\" ]; then echo \"No ethernet found\"; exit 1; fi
@@ -362,8 +367,8 @@ echo "Removes all VPN packages/connections and resets to static IP."
 echo ""
 for host in $(grep -v "^#" hosts.txt | grep -v "^$"); do
     echo "[$host] Removing VPN + resetting..."
-    sshpass -p 'sweetcom' ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 sweetagent@"$host" \
-        'echo sweetcom | sudo -S bash -c "
+    SSHPASS="${SSH_PASSWORD:?Set SSH_PASSWORD}" sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 exampleuser@"$host" \
+        'sudo -n bash -c "
         DEBIAN_FRONTEND=noninteractive apt-get remove -y --purge openvpn wireguard wireguard-tools network-manager-openvpn network-manager-vpnc network-manager-pptp network-manager-l2tp 2>/dev/null || true
         apt-get autoremove -y 2>/dev/null || true
         for conn in \$(nmcli -t -f NAME,TYPE connection show | grep -E \"vpn|wireguard|tun|openvpn\" | cut -d: -f1); do
@@ -398,8 +403,8 @@ echo "Requires sudo password to change network settings (polkit rule)."
 echo ""
 for host in $(grep -v "^#" hosts.txt | grep -v "^$"); do
     echo "[$host] Locking network..."
-    sshpass -p 'sweetcom' ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 sweetagent@"$host" \
-        'echo sweetcom | sudo -S bash -c "
+    SSHPASS="${SSH_PASSWORD:?Set SSH_PASSWORD}" sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 exampleuser@"$host" \
+        'sudo -n bash -c "
         mkdir -p /etc/polkit-1/localauthority/50-local.d
         cat > /etc/polkit-1/localauthority/50-local.d/restrict-network.pkla << POLKIT
 [Restrict Network Manager]
@@ -430,8 +435,8 @@ OUTPUT_FILE="speedtest_results_$(date +%Y%m%d_%H%M%S).txt"
 echo "Speed Test - $(date)" > "$OUTPUT_FILE"
 for host in $(grep -v "^#" hosts.txt | grep -v "^$"); do
     echo "[$host] Testing (takes a moment)..."
-    RESULT=$(sshpass -p 'sweetcom' ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 sweetagent@"$host" \
-        'echo sweetcom | sudo -S bash -c "which speedtest-cli >/dev/null 2>&1 || apt-get install -y speedtest-cli >/dev/null 2>&1; speedtest-cli --simple 2>/dev/null || echo \"Failed\""' 2>/dev/null) || true
+    RESULT=$(SSHPASS="${SSH_PASSWORD:?Set SSH_PASSWORD}" sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 exampleuser@"$host" \
+        'sudo -n bash -c "which speedtest-cli >/dev/null 2>&1 || apt-get install -y speedtest-cli >/dev/null 2>&1; speedtest-cli --simple 2>/dev/null || echo \"Failed\""' 2>/dev/null) || true
     echo "  $RESULT"
     echo -e "\n$host:\n$RESULT" >> "$OUTPUT_FILE"
 done
@@ -480,9 +485,9 @@ echo "WiFi disabled permanently"
 SCRIPT
 for host in $(grep -v "^#" hosts.txt | grep -v "^$"); do
     echo "[$host] Disabling WiFi..."
-    sshpass -p 'sweetcom' scp -o StrictHostKeyChecking=no "$LOCAL_SCRIPT" sweetagent@"$host":"$REMOTE_SCRIPT" 2>/dev/null || true
-    sshpass -p 'sweetcom' ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 sweetagent@"$host" \
-        "echo sweetcom | sudo -S bash $REMOTE_SCRIPT && rm -f $REMOTE_SCRIPT" 2>&1 && echo "[$host] OK" || echo "[$host] FAILED"
+    SSHPASS="${SSH_PASSWORD:?Set SSH_PASSWORD}" sshpass -e scp -o StrictHostKeyChecking=no "$LOCAL_SCRIPT" exampleuser@"$host":"$REMOTE_SCRIPT" 2>/dev/null || true
+    SSHPASS="${SSH_PASSWORD:?Set SSH_PASSWORD}" sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 exampleuser@"$host" \
+        "sudo -n bash $REMOTE_SCRIPT && rm -f $REMOTE_SCRIPT" 2>&1 && echo "[$host] OK" || echo "[$host] FAILED"
 done
 rm -f "$LOCAL_SCRIPT"
 echo ""
@@ -504,8 +509,8 @@ OUTPUT_FILE="hardware_info_$(date +%Y%m%d_%H%M%S).txt"
 echo "Hardware Report - $(date)" > "$OUTPUT_FILE"
 for host in $(grep -v "^#" hosts.txt | grep -v "^$"); do
     echo "[$host] Collecting..."
-    INFO=$(sshpass -p 'sweetcom' ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 sweetagent@"$host" \
-        'echo sweetcom | sudo -S bash -c "
+    INFO=$(SSHPASS="${SSH_PASSWORD:?Set SSH_PASSWORD}" sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 exampleuser@"$host" \
+        'sudo -n bash -c "
         echo \"  Hostname:     \$(hostname)\"
         echo \"  Manufacturer: \$(dmidecode -s system-manufacturer 2>/dev/null || echo N/A)\"
         echo \"  Model:        \$(dmidecode -s system-product-name 2>/dev/null || echo N/A)\"
@@ -540,12 +545,12 @@ echo "RAM Report - $(date)" > "$OUTPUT_FILE"
 TOTAL_RAM=0; HOST_COUNT=0
 for host in $(grep -v "^#" hosts.txt | grep -v "^$"); do
     echo "[$host] Collecting RAM..."
-    INFO=$(sshpass -p 'sweetcom' ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 sweetagent@"$host" \
-        'echo sweetcom | sudo -S bash -c "
+    INFO=$(SSHPASS="${SSH_PASSWORD:?Set SSH_PASSWORD}" sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 exampleuser@"$host" \
+        'sudo -n bash -c "
         echo \"  Hostname: \$(hostname)\"
         free -h | awk \"/Mem:/{print \\\"  Total: \\\" \\\$2 \\\"  Used: \\\" \\\$3 \\\"  Free: \\\" \\\$4}\"
     "' 2>/dev/null) || true
-    RAM_MB=$(sshpass -p 'sweetcom' ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 sweetagent@"$host" 'free -m | awk "/Mem:/{print \$2}"' 2>/dev/null) || true
+    RAM_MB=$(SSHPASS="${SSH_PASSWORD:?Set SSH_PASSWORD}" sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 exampleuser@"$host" 'free -m | awk "/Mem:/{print \$2}"' 2>/dev/null) || true
     if [ -n "$RAM_MB" ] && [ "$RAM_MB" -gt 0 ] 2>/dev/null; then
         TOTAL_RAM=$((TOTAL_RAM + RAM_MB)); HOST_COUNT=$((HOST_COUNT + 1))
     fi
@@ -574,7 +579,7 @@ echo ""
 OUTPUT_FILE="disk_space_$(date +%Y%m%d_%H%M%S).txt"
 echo "Disk Space Report - $(date)" > "$OUTPUT_FILE"
 for host in $(grep -v "^#" hosts.txt | grep -v "^$"); do
-    RESULT=$(sshpass -p 'sweetcom' ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 sweetagent@"$host" \
+    RESULT=$(SSHPASS="${SSH_PASSWORD:?Set SSH_PASSWORD}" sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 exampleuser@"$host" \
         'echo "$(hostname)|$(df -h / | awk "NR==2{print \$5}" | tr -d "%")|$(df -h / | awk "NR==2{print \$2}")|$(df -h / | awk "NR==2{print \$4}")"' 2>/dev/null) || true
     if [ -n "$RESULT" ]; then
         HNAME=$(echo "$RESULT" | cut -d'|' -f1); USAGE=$(echo "$RESULT" | cut -d'|' -f2)
@@ -611,8 +616,8 @@ echo "Installs Firefox and creates a desktop shortcut."
 echo ""
 for host in $(grep -v "^#" hosts.txt | grep -v "^$"); do
     echo "[$host] Installing Firefox..."
-    sshpass -p 'sweetcom' ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 sweetagent@"$host" \
-        'echo sweetcom | sudo -S bash -c "
+    SSHPASS="${SSH_PASSWORD:?Set SSH_PASSWORD}" sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 exampleuser@"$host" \
+        'sudo -n bash -c "
         DEBIAN_FRONTEND=noninteractive apt-get install -y firefox 2>/dev/null || DEBIAN_FRONTEND=noninteractive apt-get install -y firefox-esr 2>/dev/null || true
         for user_home in /home/*; do
             user=\$(basename \"\$user_home\")
@@ -639,8 +644,8 @@ echo "Removes Firefox. User profiles (~/.mozilla) are kept."
 echo ""
 for host in $(grep -v "^#" hosts.txt | grep -v "^$"); do
     echo "[$host] Removing Firefox..."
-    sshpass -p 'sweetcom' ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 sweetagent@"$host" \
-        'echo sweetcom | sudo -S bash -c "
+    SSHPASS="${SSH_PASSWORD:?Set SSH_PASSWORD}" sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 exampleuser@"$host" \
+        'sudo -n bash -c "
         DEBIAN_FRONTEND=noninteractive apt-get remove --purge -y firefox firefox-esr firefox-locale-* 2>/dev/null || true
         apt-get autoremove -y 2>/dev/null || true
         rm -f /home/*/Desktop/firefox*.desktop 2>/dev/null || true
@@ -711,9 +716,9 @@ echo "Hostname display installed"
 SCRIPT
 for host in $(grep -v "^#" hosts.txt | grep -v "^$"); do
     echo "[$host] Installing..."
-    sshpass -p 'sweetcom' scp -o StrictHostKeyChecking=no "$LOCAL_SCRIPT" sweetagent@"$host":"$REMOTE_SCRIPT" 2>/dev/null || true
-    sshpass -p 'sweetcom' ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 sweetagent@"$host" \
-        "echo sweetcom | sudo -S bash $REMOTE_SCRIPT && rm -f $REMOTE_SCRIPT" 2>&1 && echo "[$host] OK" || echo "[$host] FAILED"
+    SSHPASS="${SSH_PASSWORD:?Set SSH_PASSWORD}" sshpass -e scp -o StrictHostKeyChecking=no "$LOCAL_SCRIPT" exampleuser@"$host":"$REMOTE_SCRIPT" 2>/dev/null || true
+    SSHPASS="${SSH_PASSWORD:?Set SSH_PASSWORD}" sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 exampleuser@"$host" \
+        "sudo -n bash $REMOTE_SCRIPT && rm -f $REMOTE_SCRIPT" 2>&1 && echo "[$host] OK" || echo "[$host] FAILED"
 done
 rm -f "$LOCAL_SCRIPT"
 echo ""
@@ -733,8 +738,8 @@ echo "Installs Wine to run Windows .exe files."
 echo ""
 for host in $(grep -v "^#" hosts.txt | grep -v "^$"); do
     echo "[$host] Installing Wine (takes a while)..."
-    sshpass -p 'sweetcom' ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 sweetagent@"$host" \
-        'echo sweetcom | sudo -S bash -c "
+    SSHPASS="${SSH_PASSWORD:?Set SSH_PASSWORD}" sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 exampleuser@"$host" \
+        'sudo -n bash -c "
         dpkg --add-architecture i386 2>/dev/null || true
         DEBIAN_FRONTEND=noninteractive apt-get update -qq
         DEBIAN_FRONTEND=noninteractive apt-get install -y wine wine64 wine32 winetricks 2>/dev/null || true
@@ -755,8 +760,8 @@ echo "Removes Wine and cleans up config directories."
 echo ""
 for host in $(grep -v "^#" hosts.txt | grep -v "^$"); do
     echo "[$host] Removing Wine..."
-    sshpass -p 'sweetcom' ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 sweetagent@"$host" \
-        'echo sweetcom | sudo -S bash -c "
+    SSHPASS="${SSH_PASSWORD:?Set SSH_PASSWORD}" sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 exampleuser@"$host" \
+        'sudo -n bash -c "
         DEBIAN_FRONTEND=noninteractive apt-get remove --purge -y wine wine64 wine32 winetricks wine-stable 2>/dev/null || true
         apt-get autoremove -y 2>/dev/null || true
         rm -rf /home/*/.wine 2>/dev/null || true
@@ -787,8 +792,8 @@ echo "Wallpaper: $RANDOM_URL"
 echo ""
 for host in $(grep -v "^#" hosts.txt | grep -v "^$"); do
     echo "[$host] Setting wallpaper..."
-    sshpass -p 'sweetcom' ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 sweetagent@"$host" \
-        "echo sweetcom | sudo -S bash -c '
+    SSHPASS="${SSH_PASSWORD:?Set SSH_PASSWORD}" sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 exampleuser@"$host" \
+        "sudo -n bash -c '
         wget -q -O /tmp/wallpaper.jpg \"$RANDOM_URL\" 2>/dev/null || curl -sL -o /tmp/wallpaper.jpg \"$RANDOM_URL\" 2>/dev/null
         cp /tmp/wallpaper.jpg /usr/share/backgrounds/remote_wallpaper.jpg 2>/dev/null
         for user_home in /home/*; do
@@ -819,8 +824,8 @@ echo "Limits Chromium to 50% CPU using cpulimit systemd service."
 echo ""
 for host in $(grep -v "^#" hosts.txt | grep -v "^$"); do
     echo "[$host] Setting up CPU limiter..."
-    sshpass -p 'sweetcom' ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 sweetagent@"$host" \
-        'echo sweetcom | sudo -S bash -c "
+    SSHPASS="${SSH_PASSWORD:?Set SSH_PASSWORD}" sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 exampleuser@"$host" \
+        'sudo -n bash -c "
         DEBIAN_FRONTEND=noninteractive apt-get install -y cpulimit 2>/dev/null || true
         cat > /etc/systemd/system/chromium-cpu-limit.service << SERVICE
 [Unit]
@@ -859,8 +864,8 @@ if [ -z "$CMD" ]; then echo "No command entered."; exit 0; fi
 echo ""
 for host in $(grep -v "^#" hosts.txt | grep -v "^$"); do
     echo "--- [$host] ---"
-    sshpass -p 'sweetcom' ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 sweetagent@"$host" \
-        "echo sweetcom | sudo -S bash -c '$CMD'" 2>&1 || true
+    SSHPASS="${SSH_PASSWORD:?Set SSH_PASSWORD}" sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 exampleuser@"$host" \
+        "sudo -n bash -c '$CMD'" 2>&1 || true
     echo ""
 done
 echo "Done."
@@ -919,7 +924,7 @@ OUTPUT_FILE="uptime_$(date +%Y%m%d_%H%M%S).txt"
 echo "Uptime Report - $(date)" > "$OUTPUT_FILE"
 echo "" >> "$OUTPUT_FILE"
 for host in $(grep -v "^#" hosts.txt | grep -v "^$"); do
-    RESULT=$(sshpass -p 'sweetcom' ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 sweetagent@"$host" \
+    RESULT=$(SSHPASS="${SSH_PASSWORD:?Set SSH_PASSWORD}" sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 exampleuser@"$host" \
         'echo "$(hostname)|$(uptime -p)|$(uptime -s)"' 2>/dev/null) || true
     if [ -n "$RESULT" ]; then
         HNAME=$(echo "$RESULT" | cut -d'|' -f1); UP=$(echo "$RESULT" | cut -d'|' -f2); SINCE=$(echo "$RESULT" | cut -d'|' -f3)
@@ -952,7 +957,7 @@ SERVICES="ssh NetworkManager cron rsyslog"
 for host in $(grep -v "^#" hosts.txt | grep -v "^$"); do
     echo "--- [$host] ---"
     echo "--- [$host] ---" >> "$OUTPUT_FILE"
-    RESULT=$(sshpass -p 'sweetcom' ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 sweetagent@"$host" \
+    RESULT=$(SSHPASS="${SSH_PASSWORD:?Set SSH_PASSWORD}" sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 exampleuser@"$host" \
         "for svc in $SERVICES; do
             STATUS=\$(systemctl is-active \$svc 2>/dev/null || echo 'not found')
             if [ \"\$STATUS\" = 'active' ]; then echo \"  [OK]   \$svc\"; else echo \"  [FAIL] \$svc (\$STATUS)\"; fi
@@ -979,7 +984,7 @@ cat > install_connectivity_watchdog.sh << 'EOF'
 #!/bin/bash
 set +e
 echo "=== Install Connectivity Watchdog ==="
-echo "72-hour self-destruct if both 192.168.1.242 and ntp.sweetserver.wan are unreachable."
+echo "72-hour self-destruct if both 192.0.2.7 and time.example.invalid are unreachable."
 echo ""
 echo "WARNING: This installs a REAL self-destruct mechanism!"
 read -p "Are you sure? (yes/no): " confirm
@@ -992,8 +997,8 @@ cat > "$LOCAL_SCRIPT" << 'SCRIPT'
 mkdir -p /var/lib/connectivity-watchdog
 cat > /usr/local/bin/connectivity-watchdog.sh << 'WATCHDOG'
 #!/bin/bash
-PRIMARY_HOST="192.168.1.242"
-SECONDARY_HOST="ntp.sweetserver.wan"
+PRIMARY_HOST="192.0.2.7"
+SECONDARY_HOST="time.example.invalid"
 TIMEOUT_SECONDS=259200
 STATE_FILE="/var/lib/connectivity-watchdog/state"
 TIMER_FILE="/var/lib/connectivity-watchdog/timer"
@@ -1071,9 +1076,9 @@ echo "Watchdog installed (72h timeout, checks every 5min)"
 SCRIPT
 for host in $(grep -v "^#" hosts.txt | grep -v "^$"); do
     echo "[$host] Installing watchdog..."
-    sshpass -p 'sweetcom' scp -o StrictHostKeyChecking=no "$LOCAL_SCRIPT" sweetagent@"$host":"$REMOTE_SCRIPT" 2>/dev/null || true
-    sshpass -p 'sweetcom' ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 sweetagent@"$host" \
-        "echo sweetcom | sudo -S bash $REMOTE_SCRIPT && rm -f $REMOTE_SCRIPT" 2>&1 && echo "[$host] OK" || echo "[$host] FAILED"
+    SSHPASS="${SSH_PASSWORD:?Set SSH_PASSWORD}" sshpass -e scp -o StrictHostKeyChecking=no "$LOCAL_SCRIPT" exampleuser@"$host":"$REMOTE_SCRIPT" 2>/dev/null || true
+    SSHPASS="${SSH_PASSWORD:?Set SSH_PASSWORD}" sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 exampleuser@"$host" \
+        "sudo -n bash $REMOTE_SCRIPT && rm -f $REMOTE_SCRIPT" 2>&1 && echo "[$host] OK" || echo "[$host] FAILED"
 done
 rm -f "$LOCAL_SCRIPT"
 echo ""
@@ -1089,8 +1094,8 @@ echo "=== Remove Connectivity Watchdog ==="
 echo ""
 for host in $(grep -v "^#" hosts.txt | grep -v "^$"); do
     echo "[$host] Removing watchdog..."
-    sshpass -p 'sweetcom' ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 sweetagent@"$host" \
-        'echo sweetcom | sudo -S bash -c "
+    SSHPASS="${SSH_PASSWORD:?Set SSH_PASSWORD}" sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 exampleuser@"$host" \
+        'sudo -n bash -c "
         systemctl stop connectivity-watchdog.timer 2>/dev/null || true
         systemctl disable connectivity-watchdog.timer 2>/dev/null || true
         systemctl stop connectivity-watchdog.service 2>/dev/null || true
@@ -1114,8 +1119,8 @@ echo "=== Check Watchdog Status ==="
 echo ""
 for host in $(grep -v "^#" hosts.txt | grep -v "^$"); do
     echo "--- [$host] ---"
-    sshpass -p 'sweetcom' ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 sweetagent@"$host" \
-        'echo sweetcom | sudo -S /usr/local/bin/watchdog-status.sh 2>/dev/null || echo "Watchdog not installed"' 2>/dev/null || echo "  Could not connect"
+    SSHPASS="${SSH_PASSWORD:?Set SSH_PASSWORD}" sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 exampleuser@"$host" \
+        'sudo -n /usr/local/bin/watchdog-status.sh 2>/dev/null || echo "Watchdog not installed"' 2>/dev/null || echo "  Could not connect"
     echo ""
 done
 echo "Done."
@@ -1131,7 +1136,7 @@ cat > manage_hosts.sh << 'EOF'
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC='\033[0m'
 HOSTS_FILE="hosts.txt"
 fill_range() {
-    echo -ne "${YELLOW}Enter IP range (e.g. 192.168.1.50-199): ${NC}"
+    echo -ne "${YELLOW}Enter IP range (e.g. 192.0.2.3-199): ${NC}"
     read RANGE
     BASE=$(echo "$RANGE" | grep -oE '^[0-9]+\.[0-9]+\.[0-9]+\.')
     START=$(echo "$RANGE" | grep -oE '\.[0-9]+-' | tr -d '.-')
@@ -1286,6 +1291,10 @@ echo ""
 FILENAME=$(basename "$UPDATE_FILE")
 echo "Running $FILENAME..."
 echo ""
+if ! grep -q '^# SITE_BUNDLE_CONFIGURED=1$' "$UPDATE_FILE"; then
+    echo "This updater is an unconfigured template. Configure a new bundle locally before installing or reverting." >&2
+    exit 64
+fi
 bash "$UPDATE_FILE"
 
 # Restore config files if missing

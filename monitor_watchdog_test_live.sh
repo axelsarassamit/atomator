@@ -1,10 +1,15 @@
 #!/bin/bash
+# Deployment templates are inert until configure_site.py creates a configured bundle.
+if [[ "${SITE_CONFIGURATION_CONFIRMED:-}" != "1" ]]; then
+    printf '%s\n' 'No site configured. Use configure_site.py with explicit site settings before running this script.' >&2
+    exit 64
+fi
 set +e
 
 # Check if host was provided
 if [ -z "$1" ]; then
     echo "Usage: ./monitor_watchdog_test_live.sh <host_ip>"
-    echo "Example: ./monitor_watchdog_test_live.sh 192.168.3.50"
+    echo "Example: ./monitor_watchdog_test_live.sh 192.0.2.8"
     echo ""
     echo "This will show a live updating view of the watchdog test status."
     exit 1
@@ -26,7 +31,7 @@ while true; do
     echo ""
 
     # Get status
-    STATUS=$(sshpass -p 'sweetcom' ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 sweetagent@"$HOST" "echo sweetcom | sudo -S /usr/local/bin/watchdog-test-status.sh 2>/dev/null" 2>/dev/null)
+    STATUS=$(SSHPASS="${SSH_PASSWORD:?Set SSH_PASSWORD}" sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 exampleuser@"$HOST" "sudo -n /usr/local/bin/watchdog-test-status.sh 2>/dev/null" 2>/dev/null)
 
     if [ -n "$STATUS" ]; then
         echo "$STATUS"

@@ -1,10 +1,15 @@
 #!/bin/bash
+# Deployment templates are inert until configure_site.py creates a configured bundle.
+if [[ "${SITE_CONFIGURATION_CONFIRMED:-}" != "1" ]]; then
+    printf '%s\n' 'No site configured. Use configure_site.py with explicit site settings before running this script.' >&2
+    exit 64
+fi
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC='\033[0m'
 CONFIG_FILE="watchdog_hosts.conf"
 if [ ! -f "$CONFIG_FILE" ]; then
     cat > "$CONFIG_FILE" << 'DEFAULTS'
-HOST_1=192.168.1.242
-HOST_2=ntp.sweetserver.wan
+HOST_1=192.0.2.7
+HOST_2=time.example.invalid
 HOST_3=
 DEFAULTS
     chmod 600 "$CONFIG_FILE"

@@ -1,4 +1,9 @@
 #!/bin/bash
+# Deployment templates are inert until configure_site.py creates a configured bundle.
+if [[ "${SITE_CONFIGURATION_CONFIRMED:-}" != "1" ]]; then
+    printf '%s\n' 'No site configured. Use configure_site.py with explicit site settings before running this script.' >&2
+    exit 64
+fi
 set +e
 echo "=== Wake-on-LAN ==="
 echo "Sends WOL magic packets to wake up all computers."

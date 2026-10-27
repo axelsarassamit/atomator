@@ -1,4 +1,9 @@
 #!/bin/bash
+# Deployment templates are inert until configure_site.py creates a configured bundle.
+if [[ "${SITE_CONFIGURATION_CONFIRMED:-}" != "1" ]]; then
+    printf '%s\n' 'No site configured. Use configure_site.py with explicit site settings before running this script.' >&2
+    exit 64
+fi
 set +e
 
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC='\033[0m'
@@ -152,6 +157,10 @@ echo ""
 FILENAME=$(basename "$UPDATE_FILE")
 echo "Running $FILENAME..."
 echo ""
+if ! grep -q '^# SITE_BUNDLE_CONFIGURED=1$' "$UPDATE_FILE"; then
+    echo "This updater is an unconfigured template. Configure a new bundle locally before installing or reverting." >&2
+    exit 64
+fi
 bash "$UPDATE_FILE"
 
 # Restore config files if missing

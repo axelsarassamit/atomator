@@ -1,3 +1,5 @@
+> Configure this source before running any deployment script. See [SITE_CONFIGURATION.md](SITE_CONFIGURATION.md).
+
 # Atomator - Remote Linux Fleet Management CLI
 
 A command-line tool for managing fleets of Debian-based Linux computers from a single server. One interactive menu, 60+ scripts, SSH-based parallel execution. Built for sysadmins who need to maintain dozens (or hundreds) of machines without Ansible overhead.
@@ -172,7 +174,7 @@ Grouped into Status & Wake, DNS & IP, and Security & Testing sections.
 | 4 | View MAC addresses | Displays the collected `mac_addresses.txt` file. |
 | | **DNS & IP** | |
 | 5 | `change_dns.sh` | Changes DNS servers on all hosts (Cloudflare+Google+Quad9 or custom). |
-| 6 | `fix_static_ip.sh` | Derives IP from gateway + hostname digits (e.g., BKSAL058 → .58). Sets static IP via NetworkManager. |
+| 6 | `fix_static_ip.sh` | Derives IP from gateway + hostname digits (e.g., SITE1AL058 → .58). Sets static IP via NetworkManager. |
 | 7 | `disable_wifi.sh` | Permanently disables WiFi: turns off radio, blocks with rfkill, blacklists common WiFi kernel modules, and configures NetworkManager to ignore WiFi devices. |
 | | **Security & Testing** | |
 | 8 | `remove_vpn_reset_network.sh` | Removes VPN packages and resets network to clean static IP config. |
@@ -374,9 +376,9 @@ cd /remote_tools && bash update.sh
 
 ```
 # One IP per line. Comments start with #
-192.168.1.50
-192.168.1.51
-192.168.1.52
+192.0.2.3
+192.0.2.4
+192.0.2.5
 ```
 
 - Used by all SSH-based scripts at runtime

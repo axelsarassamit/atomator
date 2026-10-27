@@ -1,4 +1,9 @@
 #!/bin/bash
+# Deployment templates are inert until configure_site.py creates a configured bundle.
+if [[ "${SITE_CONFIGURATION_CONFIRMED:-}" != "1" ]]; then
+    printf '%s\n' 'No site configured. Use configure_site.py with explicit site settings before running this script.' >&2
+    exit 64
+fi
 
 # ============================================================================
 # Atomator - Remote Xubuntu Management - Quick Installer
@@ -48,8 +53,8 @@ cat > hosts.txt << 'HOSTSEOF'
 # One IP address per line. Lines starting with # are ignored.
 #
 # Example:
-# 192.168.1.50
-# 192.168.1.51
+# 192.0.2.3
+# 192.0.2.4
 HOSTSEOF
 echo "Created hosts.txt (empty - add your hosts)"
 fi
@@ -57,8 +62,8 @@ fi
 # Create credentials.conf if missing
 if [ ! -f credentials.conf ]; then
 cat > credentials.conf << 'CREDEOF'
-SSH_USER=sweetagent
-SSH_PASS=sweetcom
+SSH_USER=exampleuser
+SSH_PASS=${SITE_PASSWORD:?Set SITE_PASSWORD explicitly}
 CREDEOF
 chmod 600 credentials.conf
 echo "Created credentials.conf (default credentials - change with menu)"
@@ -67,8 +72,8 @@ fi
 # Create watchdog_hosts.conf if missing
 if [ ! -f watchdog_hosts.conf ]; then
 cat > watchdog_hosts.conf << 'WDEOF'
-HOST_1=192.168.1.242
-HOST_2=ntp.sweetserver.wan
+HOST_1=192.0.2.7
+HOST_2=time.example.invalid
 HOST_3=
 WDEOF
 chmod 600 watchdog_hosts.conf
@@ -97,7 +102,7 @@ echo "Runs apt update, upgrade, autoremove and autoclean on all hosts."
 echo ""
 for host in $(grep -v "^#" hosts.txt | grep -v "^$"); do
     echo "[$host] Updating..."
-    sshpass -p "$SSH_PASS" ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$SSH_USER"@"$host" \
+    SSHPASS="${SSH_PASSWORD:?Set SSH_PASSWORD}" sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$SSH_USER"@"$host" \
         'echo '"$SSH_PASS"' | sudo -S bash -c "DEBIAN_FRONTEND=noninteractive apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get upgrade -y -o Dpkg::Options::=--force-confold && DEBIAN_FRONTEND=noninteractive apt-get autoremove -y && apt-get autoclean -y"' 2>&1 && echo "[$host] OK" || echo "[$host] FAILED"
 done
 echo ""
@@ -118,7 +123,7 @@ echo "Updates all systems and purges old kernel packages to free disk space."
 echo ""
 for host in $(grep -v "^#" hosts.txt | grep -v "^$"); do
     echo "[$host] Updating + purging old kernels..."
-    sshpass -p "$SSH_PASS" ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$SSH_USER"@"$host" \
+    SSHPASS="${SSH_PASSWORD:?Set SSH_PASSWORD}" sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$SSH_USER"@"$host" \
         'echo '"$SSH_PASS"' | sudo -S bash -c "DEBIAN_FRONTEND=noninteractive apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get upgrade -y -o Dpkg::Options::=--force-confold && DEBIAN_FRONTEND=noninteractive apt-get autoremove -y --purge && apt-get autoclean -y"' 2>&1 && echo "[$host] OK" || echo "[$host] FAILED"
 done
 echo ""
@@ -139,7 +144,7 @@ echo "Stops and disables unattended-upgrades and apt timers on all hosts."
 echo ""
 for host in $(grep -v "^#" hosts.txt | grep -v "^$"); do
     echo "[$host] Disabling auto-updates..."
-    sshpass -p "$SSH_PASS" ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$SSH_USER"@"$host" \
+    SSHPASS="${SSH_PASSWORD:?Set SSH_PASSWORD}" sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$SSH_USER"@"$host" \
         'echo '"$SSH_PASS"' | sudo -S bash -c "
         systemctl stop unattended-upgrades 2>/dev/null || true
         systemctl disable unattended-upgrades 2>/dev/null || true
@@ -173,7 +178,7 @@ echo "Cleans APT cache, old logs, temp files and trash on all hosts."
 echo ""
 for host in $(grep -v "^#" hosts.txt | grep -v "^$"); do
     echo "[$host] Cleaning up..."
-    sshpass -p "$SSH_PASS" ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$SSH_USER"@"$host" \
+    SSHPASS="${SSH_PASSWORD:?Set SSH_PASSWORD}" sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$SSH_USER"@"$host" \
         'echo '"$SSH_PASS"' | sudo -S bash -c "
         apt-get clean -y
         apt-get autoclean -y
@@ -207,7 +212,7 @@ if [ "$confirm" != "yes" ]; then echo "Cancelled."; exit 0; fi
 echo ""
 for host in $(grep -v "^#" hosts.txt | grep -v "^$"); do
     echo "[$host] Rebooting..."
-    sshpass -p "$SSH_PASS" ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$SSH_USER"@"$host" \
+    SSHPASS="${SSH_PASSWORD:?Set SSH_PASSWORD}" sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$SSH_USER"@"$host" \
         'echo '"$SSH_PASS"' | sudo -S reboot' 2>/dev/null || true
 done
 echo ""
@@ -230,7 +235,7 @@ if [ "$confirm" != "yes" ]; then echo "Cancelled."; exit 0; fi
 echo ""
 for host in $(grep -v "^#" hosts.txt | grep -v "^$"); do
     echo "[$host] Shutting down..."
-    sshpass -p "$SSH_PASS" ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$SSH_USER"@"$host" \
+    SSHPASS="${SSH_PASSWORD:?Set SSH_PASSWORD}" sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$SSH_USER"@"$host" \
         'echo '"$SSH_PASS"' | sudo -S shutdown -h now' 2>/dev/null || true
 done
 echo ""
@@ -304,7 +309,7 @@ echo ""
 OUTPUT_FILE="mac_addresses.txt"
 > "$OUTPUT_FILE"
 for host in $(grep -v "^#" hosts.txt | grep -v "^$"); do
-    MAC_INFO=$(sshpass -p "$SSH_PASS" ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$SSH_USER"@"$host" \
+    MAC_INFO=$(SSHPASS="${SSH_PASSWORD:?Set SSH_PASSWORD}" sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$SSH_USER"@"$host" \
         'IFACE=$(ip route | grep default | awk "{print \$5}" | head -1); if [ -n "$IFACE" ]; then MAC=$(cat /sys/class/net/$IFACE/address 2>/dev/null); HOSTNAME=$(hostname); echo "$MAC|$HOSTNAME"; fi' 2>/dev/null) || true
     if [ -n "$MAC_INFO" ]; then
         MAC=$(echo "$MAC_INFO" | cut -d'|' -f1); HNAME=$(echo "$MAC_INFO" | cut -d'|' -f2)
@@ -332,7 +337,7 @@ echo "Sets DNS to Cloudflare (1.1.1.1) + Google (8.8.8.8) + Quad9 (9.9.9.9)"
 echo ""
 for host in $(grep -v "^#" hosts.txt | grep -v "^$"); do
     echo "[$host] Changing DNS..."
-    sshpass -p "$SSH_PASS" ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$SSH_USER"@"$host" \
+    SSHPASS="${SSH_PASSWORD:?Set SSH_PASSWORD}" sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$SSH_USER"@"$host" \
         'echo '"$SSH_PASS"' | sudo -S bash -c "
         CON_NAME=\$(nmcli -t -f NAME,TYPE connection show --active | grep ethernet | head -1 | cut -d: -f1)
         if [ -n \"\$CON_NAME\" ]; then
@@ -363,7 +368,7 @@ echo "Converts the current DHCP address to a permanent static IP."
 echo ""
 for host in $(grep -v "^#" hosts.txt | grep -v "^$"); do
     echo "[$host] Setting static IP..."
-    sshpass -p "$SSH_PASS" ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$SSH_USER"@"$host" \
+    SSHPASS="${SSH_PASSWORD:?Set SSH_PASSWORD}" sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$SSH_USER"@"$host" \
         'echo '"$SSH_PASS"' | sudo -S bash -c "
         DEV=\$(nmcli -t -f DEVICE,TYPE device | grep ethernet | head -1 | cut -d: -f1)
         CON_NAME=\$(nmcli -t -f NAME,TYPE connection show --active | grep ethernet | head -1 | cut -d: -f1)
@@ -396,7 +401,7 @@ echo "Removes all VPN packages/connections and resets to static IP with DNS."
 echo ""
 for host in $(grep -v "^#" hosts.txt | grep -v "^$"); do
     echo "[$host] Removing VPN + resetting..."
-    sshpass -p "$SSH_PASS" ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$SSH_USER"@"$host" \
+    SSHPASS="${SSH_PASSWORD:?Set SSH_PASSWORD}" sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$SSH_USER"@"$host" \
         'echo '"$SSH_PASS"' | sudo -S bash -c "
         DEBIAN_FRONTEND=noninteractive apt-get remove -y --purge openvpn wireguard wireguard-tools network-manager-openvpn network-manager-vpnc network-manager-pptp network-manager-l2tp 2>/dev/null || true
         apt-get autoremove -y 2>/dev/null || true
@@ -435,7 +440,7 @@ echo "Requires sudo password to change network settings (polkit rule)."
 echo ""
 for host in $(grep -v "^#" hosts.txt | grep -v "^$"); do
     echo "[$host] Locking network..."
-    sshpass -p "$SSH_PASS" ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$SSH_USER"@"$host" \
+    SSHPASS="${SSH_PASSWORD:?Set SSH_PASSWORD}" sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$SSH_USER"@"$host" \
         'echo '"$SSH_PASS"' | sudo -S bash -c "
         mkdir -p /etc/polkit-1/localauthority/50-local.d
         cat > /etc/polkit-1/localauthority/50-local.d/restrict-network.pkla << POLKIT
@@ -468,7 +473,7 @@ OUTPUT_FILE="speedtest_results_$(date +%Y%m%d_%H%M%S).txt"
 echo "Speed Test - $(date)" > "$OUTPUT_FILE"
 for host in $(grep -v "^#" hosts.txt | grep -v "^$"); do
     echo "[$host] Testing (takes a moment)..."
-    RESULT=$(sshpass -p "$SSH_PASS" ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$SSH_USER"@"$host" \
+    RESULT=$(SSHPASS="${SSH_PASSWORD:?Set SSH_PASSWORD}" sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$SSH_USER"@"$host" \
         'echo '"$SSH_PASS"' | sudo -S bash -c "which speedtest-cli >/dev/null 2>&1 || apt-get install -y speedtest-cli >/dev/null 2>&1; speedtest-cli --simple 2>/dev/null || echo \"Failed\""' 2>/dev/null) || true
     echo "  $RESULT"
     echo -e "\n$host:\n$RESULT" >> "$OUTPUT_FILE"
@@ -519,8 +524,8 @@ echo "WiFi disabled permanently"
 SCRIPT
 for host in $(grep -v "^#" hosts.txt | grep -v "^$"); do
     echo "[$host] Disabling WiFi..."
-    sshpass -p "$SSH_PASS" scp -o StrictHostKeyChecking=no "$LOCAL_SCRIPT" "$SSH_USER"@"$host":"$REMOTE_SCRIPT" 2>/dev/null || true
-    sshpass -p "$SSH_PASS" ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$SSH_USER"@"$host" \
+    SSHPASS="${SSH_PASSWORD:?Set SSH_PASSWORD}" sshpass -e scp -o StrictHostKeyChecking=no "$LOCAL_SCRIPT" "$SSH_USER"@"$host":"$REMOTE_SCRIPT" 2>/dev/null || true
+    SSHPASS="${SSH_PASSWORD:?Set SSH_PASSWORD}" sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$SSH_USER"@"$host" \
         "echo $SSH_PASS | sudo -S bash $REMOTE_SCRIPT && rm -f $REMOTE_SCRIPT" 2>&1 && echo "[$host] OK" || echo "[$host] FAILED"
 done
 rm -f "$LOCAL_SCRIPT"
@@ -544,7 +549,7 @@ OUTPUT_FILE="hardware_info_$(date +%Y%m%d_%H%M%S).txt"
 echo "Hardware Report - $(date)" > "$OUTPUT_FILE"
 for host in $(grep -v "^#" hosts.txt | grep -v "^$"); do
     echo "[$host] Collecting..."
-    INFO=$(sshpass -p "$SSH_PASS" ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$SSH_USER"@"$host" \
+    INFO=$(SSHPASS="${SSH_PASSWORD:?Set SSH_PASSWORD}" sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$SSH_USER"@"$host" \
         'echo '"$SSH_PASS"' | sudo -S bash -c "
         echo \"  Hostname:     \$(hostname)\"
         echo \"  Manufacturer: \$(dmidecode -s system-manufacturer 2>/dev/null || echo N/A)\"
@@ -581,12 +586,12 @@ echo "RAM Report - $(date)" > "$OUTPUT_FILE"
 TOTAL_RAM=0; HOST_COUNT=0
 for host in $(grep -v "^#" hosts.txt | grep -v "^$"); do
     echo "[$host] Collecting RAM..."
-    INFO=$(sshpass -p "$SSH_PASS" ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$SSH_USER"@"$host" \
+    INFO=$(SSHPASS="${SSH_PASSWORD:?Set SSH_PASSWORD}" sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$SSH_USER"@"$host" \
         'echo '"$SSH_PASS"' | sudo -S bash -c "
         echo \"  Hostname: \$(hostname)\"
         free -h | awk \"/Mem:/{print \\\"  Total: \\\" \\\$2 \\\"  Used: \\\" \\\$3 \\\"  Free: \\\" \\\$4}\"
     "' 2>/dev/null) || true
-    RAM_MB=$(sshpass -p "$SSH_PASS" ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$SSH_USER"@"$host" 'free -m | awk "/Mem:/{print \$2}"' 2>/dev/null) || true
+    RAM_MB=$(SSHPASS="${SSH_PASSWORD:?Set SSH_PASSWORD}" sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$SSH_USER"@"$host" 'free -m | awk "/Mem:/{print \$2}"' 2>/dev/null) || true
     if [ -n "$RAM_MB" ] && [ "$RAM_MB" -gt 0 ] 2>/dev/null; then
         TOTAL_RAM=$((TOTAL_RAM + RAM_MB)); HOST_COUNT=$((HOST_COUNT + 1))
     fi
@@ -616,7 +621,7 @@ echo ""
 OUTPUT_FILE="disk_space_$(date +%Y%m%d_%H%M%S).txt"
 echo "Disk Space Report - $(date)" > "$OUTPUT_FILE"
 for host in $(grep -v "^#" hosts.txt | grep -v "^$"); do
-    RESULT=$(sshpass -p "$SSH_PASS" ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$SSH_USER"@"$host" \
+    RESULT=$(SSHPASS="${SSH_PASSWORD:?Set SSH_PASSWORD}" sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$SSH_USER"@"$host" \
         'echo "$(hostname)|$(df -h / | awk "NR==2{print \$5}" | tr -d "%")|$(df -h / | awk "NR==2{print \$2}")|$(df -h / | awk "NR==2{print \$4}")"' 2>/dev/null) || true
     if [ -n "$RESULT" ]; then
         HNAME=$(echo "$RESULT" | cut -d'|' -f1); USAGE=$(echo "$RESULT" | cut -d'|' -f2)
@@ -654,7 +659,7 @@ echo "Installs Firefox and creates a desktop shortcut."
 echo ""
 for host in $(grep -v "^#" hosts.txt | grep -v "^$"); do
     echo "[$host] Installing Firefox..."
-    sshpass -p "$SSH_PASS" ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$SSH_USER"@"$host" \
+    SSHPASS="${SSH_PASSWORD:?Set SSH_PASSWORD}" sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$SSH_USER"@"$host" \
         'echo '"$SSH_PASS"' | sudo -S bash -c "
         DEBIAN_FRONTEND=noninteractive apt-get install -y firefox 2>/dev/null || DEBIAN_FRONTEND=noninteractive apt-get install -y firefox-esr 2>/dev/null || true
         for user_home in /home/*; do
@@ -683,7 +688,7 @@ echo "Removes Firefox. User profiles (~/.mozilla) are kept."
 echo ""
 for host in $(grep -v "^#" hosts.txt | grep -v "^$"); do
     echo "[$host] Removing Firefox..."
-    sshpass -p "$SSH_PASS" ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$SSH_USER"@"$host" \
+    SSHPASS="${SSH_PASSWORD:?Set SSH_PASSWORD}" sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$SSH_USER"@"$host" \
         'echo '"$SSH_PASS"' | sudo -S bash -c "
         DEBIAN_FRONTEND=noninteractive apt-get remove --purge -y firefox firefox-esr firefox-locale-* 2>/dev/null || true
         apt-get autoremove -y 2>/dev/null || true
@@ -756,8 +761,8 @@ echo "Hostname display installed"
 SCRIPT
 for host in $(grep -v "^#" hosts.txt | grep -v "^$"); do
     echo "[$host] Installing..."
-    sshpass -p "$SSH_PASS" scp -o StrictHostKeyChecking=no "$LOCAL_SCRIPT" "$SSH_USER"@"$host":"$REMOTE_SCRIPT" 2>/dev/null || true
-    sshpass -p "$SSH_PASS" ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$SSH_USER"@"$host" \
+    SSHPASS="${SSH_PASSWORD:?Set SSH_PASSWORD}" sshpass -e scp -o StrictHostKeyChecking=no "$LOCAL_SCRIPT" "$SSH_USER"@"$host":"$REMOTE_SCRIPT" 2>/dev/null || true
+    SSHPASS="${SSH_PASSWORD:?Set SSH_PASSWORD}" sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$SSH_USER"@"$host" \
         "echo $SSH_PASS | sudo -S bash $REMOTE_SCRIPT && rm -f $REMOTE_SCRIPT" 2>&1 && echo "[$host] OK" || echo "[$host] FAILED"
 done
 rm -f "$LOCAL_SCRIPT"
@@ -779,7 +784,7 @@ echo "Installs Wine to run Windows .exe files."
 echo ""
 for host in $(grep -v "^#" hosts.txt | grep -v "^$"); do
     echo "[$host] Installing Wine (takes a while)..."
-    sshpass -p "$SSH_PASS" ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$SSH_USER"@"$host" \
+    SSHPASS="${SSH_PASSWORD:?Set SSH_PASSWORD}" sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$SSH_USER"@"$host" \
         'echo '"$SSH_PASS"' | sudo -S bash -c "
         dpkg --add-architecture i386 2>/dev/null || true
         DEBIAN_FRONTEND=noninteractive apt-get update -qq
@@ -802,7 +807,7 @@ echo "Removes Wine and cleans up config directories."
 echo ""
 for host in $(grep -v "^#" hosts.txt | grep -v "^$"); do
     echo "[$host] Removing Wine..."
-    sshpass -p "$SSH_PASS" ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$SSH_USER"@"$host" \
+    SSHPASS="${SSH_PASSWORD:?Set SSH_PASSWORD}" sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$SSH_USER"@"$host" \
         'echo '"$SSH_PASS"' | sudo -S bash -c "
         DEBIAN_FRONTEND=noninteractive apt-get remove --purge -y wine wine64 wine32 winetricks wine-stable 2>/dev/null || true
         apt-get autoremove -y 2>/dev/null || true
@@ -835,7 +840,7 @@ echo "Wallpaper: $RANDOM_URL"
 echo ""
 for host in $(grep -v "^#" hosts.txt | grep -v "^$"); do
     echo "[$host] Setting wallpaper..."
-    sshpass -p "$SSH_PASS" ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$SSH_USER"@"$host" \
+    SSHPASS="${SSH_PASSWORD:?Set SSH_PASSWORD}" sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$SSH_USER"@"$host" \
         "echo $SSH_PASS | sudo -S bash -c '
         wget -q -O /tmp/wallpaper.jpg \"$RANDOM_URL\" 2>/dev/null || curl -sL -o /tmp/wallpaper.jpg \"$RANDOM_URL\" 2>/dev/null
         cp /tmp/wallpaper.jpg /usr/share/backgrounds/remote_wallpaper.jpg 2>/dev/null
@@ -868,7 +873,7 @@ echo "Limits Chromium to 50% CPU using cpulimit systemd service."
 echo ""
 for host in $(grep -v "^#" hosts.txt | grep -v "^$"); do
     echo "[$host] Setting up CPU limiter..."
-    sshpass -p "$SSH_PASS" ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$SSH_USER"@"$host" \
+    SSHPASS="${SSH_PASSWORD:?Set SSH_PASSWORD}" sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$SSH_USER"@"$host" \
         'echo '"$SSH_PASS"' | sudo -S bash -c "
         DEBIAN_FRONTEND=noninteractive apt-get install -y cpulimit 2>/dev/null || true
         cat > /etc/systemd/system/chromium-cpu-limit.service << SERVICE
@@ -949,7 +954,7 @@ if [ -z "$CMD" ]; then echo "No command entered."; exit 0; fi
 echo ""
 for host in $(grep -v "^#" hosts.txt | grep -v "^$"); do
     echo "--- [$host] ---"
-    sshpass -p "$SSH_PASS" ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$SSH_USER"@"$host" \
+    SSHPASS="${SSH_PASSWORD:?Set SSH_PASSWORD}" sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$SSH_USER"@"$host" \
         "echo $SSH_PASS | sudo -S bash -c '$CMD'" 2>&1 || true
     echo ""
 done
@@ -1004,7 +1009,7 @@ OUTPUT_FILE="uptime_$(date +%Y%m%d_%H%M%S).txt"
 echo "Uptime Report - $(date)" > "$OUTPUT_FILE"
 echo "" >> "$OUTPUT_FILE"
 for host in $(grep -v "^#" hosts.txt | grep -v "^$"); do
-    RESULT=$(sshpass -p "$SSH_PASS" ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$SSH_USER"@"$host" \
+    RESULT=$(SSHPASS="${SSH_PASSWORD:?Set SSH_PASSWORD}" sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$SSH_USER"@"$host" \
         'echo "$(hostname)|$(uptime -p)|$(uptime -s)"' 2>/dev/null) || true
     if [ -n "$RESULT" ]; then
         HNAME=$(echo "$RESULT" | cut -d'|' -f1); UP=$(echo "$RESULT" | cut -d'|' -f2); SINCE=$(echo "$RESULT" | cut -d'|' -f3)
@@ -1038,7 +1043,7 @@ SERVICES="ssh NetworkManager cron rsyslog"
 for host in $(grep -v "^#" hosts.txt | grep -v "^$"); do
     echo "--- [$host] ---"
     echo "--- [$host] ---" >> "$OUTPUT_FILE"
-    RESULT=$(sshpass -p "$SSH_PASS" ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$SSH_USER"@"$host" \
+    RESULT=$(SSHPASS="${SSH_PASSWORD:?Set SSH_PASSWORD}" sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$SSH_USER"@"$host" \
         "for svc in $SERVICES; do
             STATUS=\$(systemctl is-active \$svc 2>/dev/null || echo 'not found')
             if [ \"\$STATUS\" = 'active' ]; then echo \"  [OK]   \$svc\"; else echo \"  [FAIL] \$svc (\$STATUS)\"; fi
@@ -1170,8 +1175,8 @@ sed -i "s/__HOST_2__/$HOST_2/g" "$LOCAL_SCRIPT"
 sed -i "s/__HOST_3__/$HOST_3/g" "$LOCAL_SCRIPT"
 for host in $(grep -v "^#" hosts.txt | grep -v "^$"); do
     echo "[$host] Installing watchdog..."
-    sshpass -p "$SSH_PASS" scp -o StrictHostKeyChecking=no "$LOCAL_SCRIPT" "$SSH_USER"@"$host":"$REMOTE_SCRIPT" 2>/dev/null || true
-    sshpass -p "$SSH_PASS" ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$SSH_USER"@"$host" \
+    SSHPASS="${SSH_PASSWORD:?Set SSH_PASSWORD}" sshpass -e scp -o StrictHostKeyChecking=no "$LOCAL_SCRIPT" "$SSH_USER"@"$host":"$REMOTE_SCRIPT" 2>/dev/null || true
+    SSHPASS="${SSH_PASSWORD:?Set SSH_PASSWORD}" sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$SSH_USER"@"$host" \
         "echo $SSH_PASS | sudo -S bash $REMOTE_SCRIPT && rm -f $REMOTE_SCRIPT" 2>&1 && echo "[$host] OK" || echo "[$host] FAILED"
 done
 rm -f "$LOCAL_SCRIPT"
@@ -1189,7 +1194,7 @@ echo "=== Remove Connectivity Watchdog ==="
 echo ""
 for host in $(grep -v "^#" hosts.txt | grep -v "^$"); do
     echo "[$host] Removing watchdog..."
-    sshpass -p "$SSH_PASS" ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$SSH_USER"@"$host" \
+    SSHPASS="${SSH_PASSWORD:?Set SSH_PASSWORD}" sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$SSH_USER"@"$host" \
         'echo '"$SSH_PASS"' | sudo -S bash -c "
         systemctl stop connectivity-watchdog.timer 2>/dev/null || true
         systemctl disable connectivity-watchdog.timer 2>/dev/null || true
@@ -1215,7 +1220,7 @@ echo "=== Check Watchdog Status ==="
 echo ""
 for host in $(grep -v "^#" hosts.txt | grep -v "^$"); do
     echo "--- [$host] ---"
-    sshpass -p "$SSH_PASS" ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$SSH_USER"@"$host" \
+    SSHPASS="${SSH_PASSWORD:?Set SSH_PASSWORD}" sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$SSH_USER"@"$host" \
         'echo '"$SSH_PASS"' | sudo -S /usr/local/bin/watchdog-status.sh 2>/dev/null || echo "Watchdog not installed"' 2>/dev/null || echo "  Could not connect"
     echo ""
 done
@@ -1232,7 +1237,7 @@ cat > manage_hosts.sh << 'EOF'
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC='\033[0m'
 HOSTS_FILE="hosts.txt"
 fill_range() {
-    echo -ne "${YELLOW}Enter IP range (e.g. 192.168.1.50-199): ${NC}"
+    echo -ne "${YELLOW}Enter IP range (e.g. 192.0.2.3-199): ${NC}"
     read RANGE
     BASE=$(echo "$RANGE" | grep -oE '^[0-9]+\.[0-9]+\.[0-9]+\.')
     START=$(echo "$RANGE" | grep -oE '\.[0-9]+-' | tr -d '.-')
@@ -1286,7 +1291,7 @@ cat > change_password.sh << 'EOF'
 set +e
 source ./credentials.conf 2>/dev/null || { echo "ERROR: credentials.conf not found!"; exit 1; }
 echo "=== Change Remote Password ==="
-echo "Changes the password for $SSH_USER on all remote hosts."
+echo "Credentials are supplied locally and are not displayed."
 echo ""
 echo -ne "New password: "
 read -s NEW_PASS
@@ -1297,14 +1302,14 @@ echo ""
 echo ""
 if [ -z "$NEW_PASS" ]; then echo "No password entered."; exit 1; fi
 if [ "$NEW_PASS" != "$CONFIRM_PASS" ]; then echo "Passwords do not match!"; exit 1; fi
-echo "This will change the password for '$SSH_USER' on ALL hosts."
+echo "Credentials are supplied locally and are not displayed."
 read -p "Are you sure? (yes/no): " confirm
 if [ "$confirm" != "yes" ]; then echo "Cancelled."; exit 0; fi
 echo ""
 SUCCESS=0; FAILED=0
 for host in $(grep -v "^#" hosts.txt | grep -v "^$"); do
-    echo "[$host] Changing password..."
-    sshpass -p "$SSH_PASS" ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$SSH_USER"@"$host" \
+echo "Credentials are supplied locally and are not displayed."
+    SSHPASS="${SSH_PASSWORD:?Set SSH_PASSWORD}" sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$SSH_USER"@"$host" \
         "echo $SSH_PASS | sudo -S bash -c 'printf \"%s:%s\" \"$SSH_USER\" \"$NEW_PASS\" | chpasswd'" 2>&1 && {
         echo "[$host] OK"
         SUCCESS=$((SUCCESS + 1))
@@ -1337,8 +1342,8 @@ RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC
 CONFIG_FILE="watchdog_hosts.conf"
 if [ ! -f "$CONFIG_FILE" ]; then
     cat > "$CONFIG_FILE" << 'DEFAULTS'
-HOST_1=192.168.1.242
-HOST_2=ntp.sweetserver.wan
+HOST_1=192.0.2.7
+HOST_2=time.example.invalid
 HOST_3=
 DEFAULTS
     chmod 600 "$CONFIG_FILE"
@@ -1556,6 +1561,10 @@ echo ""
 FILENAME=$(basename "$UPDATE_FILE")
 echo "Running $FILENAME..."
 echo ""
+if ! grep -q '^# SITE_BUNDLE_CONFIGURED=1$' "$UPDATE_FILE"; then
+    echo "This updater is an unconfigured template. Configure a new bundle locally before installing or reverting." >&2
+    exit 64
+fi
 bash "$UPDATE_FILE"
 
 # Restore config files if missing
@@ -1646,7 +1655,7 @@ from a central Debian server via SSH.
 
 ## Credentials
 
-Default: sweetagent / sweetcom
+Default: exampleuser / ${SITE_PASSWORD:?Set SITE_PASSWORD explicitly}
 Change via: Menu > Tools > Change remote password
 File: credentials.conf (auto-created, mode 600)
 
@@ -1900,7 +1909,7 @@ menu_tools() {
         echo ""
         echo -e "   ${YELLOW}1.${NC} Run custom command             (execute anything on all hosts)"
         echo -e "   ${YELLOW}2.${NC} Delete SSH keys (local)        (clean keys on this server)"
-        echo -e "   ${YELLOW}3.${NC} Change remote password         (change SSH user password)"
+echo "Credentials are supplied locally and are not displayed."
         echo ""
         echo -e "   ${RED}0.${NC} Back"
         echo ""

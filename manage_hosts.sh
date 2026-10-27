@@ -1,8 +1,13 @@
 #!/bin/bash
+# Deployment templates are inert until configure_site.py creates a configured bundle.
+if [[ "${SITE_CONFIGURATION_CONFIRMED:-}" != "1" ]]; then
+    printf '%s\n' 'No site configured. Use configure_site.py with explicit site settings before running this script.' >&2
+    exit 64
+fi
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC='\033[0m'
 HOSTS_FILE="hosts.txt"
 fill_range() {
-    echo -ne "${YELLOW}Enter IP range (e.g. 192.168.1.50-199): ${NC}"
+    echo -ne "${YELLOW}Enter IP range (e.g. 192.0.2.3-199): ${NC}"
     read RANGE
     BASE=$(echo "$RANGE" | grep -oE '^[0-9]+\.[0-9]+\.[0-9]+\.')
     START=$(echo "$RANGE" | grep -oE '\.[0-9]+-' | tr -d '.-')
