@@ -30,3 +30,11 @@ debug.log.1
 site-settings.json
 __pycache__/
 *.pyc
+reports/
+known_hosts
+.site-settings.json
+.site-configured.json
+run-configured.sh
+# Public empty defaults are required by the configured-bundle installer.
+!defaults/credentials.conf
+!defaults/watchdog_hosts.conf

@@ -5,7 +5,8 @@ if [[ "${SITE_CONFIGURATION_CONFIRMED:-}" != "1" ]]; then
     exit 64
 fi
 set +e
-source ./credentials.conf 2>/dev/null || { echo "ERROR: credentials.conf not found!"; exit 1; }
+source "$(dirname -- "${BASH_SOURCE[0]}")/lib/runtime.sh"
+runtime_init "$@"
 echo "=== Fix Static IP ==="
 echo "Sets static IP based on gateway + hostname."
 echo "IP = gateway first 3 octets + last digits of hostname."
@@ -36,11 +37,13 @@ case $dns_choice in
         echo "Keeping current DNS from each host (fallback: 1.1.1.1 8.8.8.8 9.9.9.9)"
         ;;
 esac
+python3 "$ATOMATOR_ROOT/lib/settings.py" dns "$DNS_OVERRIDE" || exit 64
 echo ""
-for host in $(grep -v "^#" hosts.txt | grep -v "^$"); do
+run_host() {
+    local host="$1"
     echo "[$host] Setting static IP..."
-    SSHPASS="${SSH_PASSWORD:?Set SSH_PASSWORD}" sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$SSH_USER"@"$host" \
-        'echo '"$SSH_PASS"' | sudo -S bash -c "
+    remote_exec "$host" \
+        'sudo -n bash -ec "
         DEV=\$(nmcli -t -f DEVICE,TYPE device | grep ethernet | head -1 | cut -d: -f1)
         CON_NAME=\$(nmcli -t -f NAME,TYPE connection show --active | grep ethernet | head -1 | cut -d: -f1)
         if [ -z \"\$CON_NAME\" ] || [ -z \"\$DEV\" ]; then echo \"No ethernet found\"; exit 1; fi
@@ -64,6 +67,7 @@ for host in $(grep -v "^#" hosts.txt | grep -v "^$"); do
         nmcli con up \"\$CON_NAME\" 2>/dev/null || true
         echo \"Static IP: \$NEW_IP gw \$GATEWAY dns \$DNS (hostname: \$HNAME)\"
     "' 2>&1 && echo "[$host] OK" || echo "[$host] FAILED"
-done
+}
+fleet_run run_host
 echo ""
 echo "Done."

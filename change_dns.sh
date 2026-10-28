@@ -5,7 +5,8 @@ if [[ "${SITE_CONFIGURATION_CONFIRMED:-}" != "1" ]]; then
     exit 64
 fi
 set +e
-source ./credentials.conf 2>/dev/null || { echo "ERROR: credentials.conf not found!"; exit 1; }
+source "$(dirname -- "${BASH_SOURCE[0]}")/lib/runtime.sh"
+runtime_init "$@"
 echo "=== Change DNS Servers ==="
 echo ""
 echo "DNS servers to set:"
@@ -24,13 +25,15 @@ case $dns_choice in
         DNS_SERVERS="1.1.1.1 8.8.8.8 9.9.9.9"
         ;;
 esac
+python3 "$ATOMATOR_ROOT/lib/settings.py" dns "$DNS_SERVERS" || exit 64
 echo ""
 echo "Setting DNS to: $DNS_SERVERS"
 echo ""
-for host in $(grep -v "^#" hosts.txt | grep -v "^$"); do
+run_host() {
+    local host="$1"
     echo "[$host] Changing DNS..."
-    SSHPASS="${SSH_PASSWORD:?Set SSH_PASSWORD}" sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$SSH_USER"@"$host" \
-        'echo '"$SSH_PASS"' | sudo -S bash -c "
+    remote_exec "$host" \
+        'sudo -n bash -ec "
         CON_NAME=\$(nmcli -t -f NAME,TYPE connection show --active | grep ethernet | head -1 | cut -d: -f1)
         if [ -n \"\$CON_NAME\" ]; then
             nmcli con mod \"\$CON_NAME\" ipv4.dns \"'"$DNS_SERVERS"'\"
@@ -41,6 +44,7 @@ for host in $(grep -v "^#" hosts.txt | grep -v "^$"); do
             echo \"No active ethernet connection\"
         fi
     "' 2>&1 && echo "[$host] OK" || echo "[$host] FAILED"
-done
+}
+fleet_run run_host
 echo ""
 echo "Done."

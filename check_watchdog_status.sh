@@ -5,13 +5,16 @@ if [[ "${SITE_CONFIGURATION_CONFIRMED:-}" != "1" ]]; then
     exit 64
 fi
 set +e
-source ./credentials.conf 2>/dev/null || { echo "ERROR: credentials.conf not found!"; exit 1; }
+source "$(dirname -- "${BASH_SOURCE[0]}")/lib/runtime.sh"
+runtime_init "$@"
 echo "=== Check Watchdog Status ==="
 echo ""
-for host in $(grep -v "^#" hosts.txt | grep -v "^$"); do
+run_host() {
+    local host="$1"
     echo "--- [$host] ---"
-    SSHPASS="${SSH_PASSWORD:?Set SSH_PASSWORD}" sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$SSH_USER"@"$host" \
-        'echo '"$SSH_PASS"' | sudo -S /usr/local/bin/watchdog-status.sh 2>/dev/null || echo "Watchdog not installed"' 2>/dev/null || echo "  Could not connect"
+    remote_exec "$host" \
+        'sudo -n /usr/local/bin/watchdog-status.sh 2>/dev/null || echo "Watchdog not installed"' 2>/dev/null || echo "  Could not connect"
     echo ""
-done
+}
+fleet_run run_host
 echo "Done."

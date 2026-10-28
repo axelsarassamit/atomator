@@ -5,14 +5,17 @@ if [[ "${SITE_CONFIGURATION_CONFIRMED:-}" != "1" ]]; then
     exit 64
 fi
 set +e
-source ./credentials.conf 2>/dev/null || { echo "ERROR: credentials.conf not found!"; exit 1; }
+source "$(dirname -- "${BASH_SOURCE[0]}")/lib/runtime.sh"
+runtime_init "$@"
 echo "=== Update All Systems ==="
 echo "Runs apt update, upgrade, autoremove and autoclean on all hosts."
 echo ""
-for host in $(grep -v "^#" hosts.txt | grep -v "^$"); do
+run_host() {
+    local host="$1"
     echo "[$host] Updating..."
-    SSHPASS="${SSH_PASSWORD:?Set SSH_PASSWORD}" sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$SSH_USER"@"$host" \
-        'echo '"$SSH_PASS"' | sudo -S bash -c "DEBIAN_FRONTEND=noninteractive apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get upgrade -y -o Dpkg::Options::=--force-confold && DEBIAN_FRONTEND=noninteractive apt-get autoremove -y && apt-get autoclean -y"' 2>&1 && echo "[$host] OK" || echo "[$host] FAILED"
-done
+    remote_exec "$host" \
+        'sudo -n bash -ec "DEBIAN_FRONTEND=noninteractive apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get upgrade -y -o Dpkg::Options::=--force-confold && DEBIAN_FRONTEND=noninteractive apt-get autoremove -y && apt-get autoclean -y"' 2>&1 && echo "[$host] OK" || echo "[$host] FAILED"
+}
+fleet_run run_host
 echo ""
 echo "Done."

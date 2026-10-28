@@ -5,8 +5,9 @@ if [[ "${SITE_CONFIGURATION_CONFIRMED:-}" != "1" ]]; then
     exit 64
 fi
 set +e
-source ./credentials.conf 2>/dev/null || { echo "ERROR: credentials.conf not found!"; exit 1; }
-source ./watchdog_hosts.conf 2>/dev/null || { echo "ERROR: watchdog_hosts.conf not found!"; exit 1; }
+source "$(dirname -- "${BASH_SOURCE[0]}")/lib/runtime.sh"
+runtime_init "$@"
+runtime_watchdog_config || exit $?
 echo "=== Install Connectivity Watchdog ==="
 echo "72-hour self-destruct if configured hosts are unreachable."
 echo ""
@@ -19,7 +20,7 @@ echo "WARNING: This installs a REAL self-destruct mechanism!"
 read -p "Are you sure? (yes/no): " confirm
 if [ "$confirm" != "yes" ]; then echo "Cancelled."; exit 0; fi
 echo ""
-LOCAL_SCRIPT="/tmp/_install_watchdog.sh"
+LOCAL_SCRIPT="$ATOMATOR_RUN_DIR/payload.sh"
 REMOTE_SCRIPT="/tmp/_install_watchdog.sh"
 cat > "$LOCAL_SCRIPT" << 'SCRIPT'
 #!/bin/bash
@@ -109,12 +110,12 @@ SCRIPT
 sed -i "s/__HOST_1__/$HOST_1/g" "$LOCAL_SCRIPT"
 sed -i "s/__HOST_2__/$HOST_2/g" "$LOCAL_SCRIPT"
 sed -i "s/__HOST_3__/$HOST_3/g" "$LOCAL_SCRIPT"
-for host in $(grep -v "^#" hosts.txt | grep -v "^$"); do
+run_host() {
+    local host="$1"
     echo "[$host] Installing watchdog..."
-    SSHPASS="${SSH_PASSWORD:?Set SSH_PASSWORD}" sshpass -e scp -o StrictHostKeyChecking=no "$LOCAL_SCRIPT" "$SSH_USER"@"$host":"$REMOTE_SCRIPT" 2>/dev/null || true
-    SSHPASS="${SSH_PASSWORD:?Set SSH_PASSWORD}" sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$SSH_USER"@"$host" \
-        "echo $SSH_PASS | sudo -S bash $REMOTE_SCRIPT && rm -f $REMOTE_SCRIPT" 2>&1 && echo "[$host] OK" || echo "[$host] FAILED"
-done
+        remote_script "$host" "$LOCAL_SCRIPT" 2>&1 && echo "[$host] OK" || echo "[$host] FAILED"
+}
+fleet_run run_host
 rm -f "$LOCAL_SCRIPT"
 echo ""
 echo "Done."

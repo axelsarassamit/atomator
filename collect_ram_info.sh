@@ -5,7 +5,8 @@ if [[ "${SITE_CONFIGURATION_CONFIRMED:-}" != "1" ]]; then
     exit 64
 fi
 set +e
-source ./credentials.conf 2>/dev/null || { echo "ERROR: credentials.conf not found!"; exit 1; }
+source "$(dirname -- "${BASH_SOURCE[0]}")/lib/runtime.sh"
+runtime_init "$@"
 echo "=== Collect RAM Info ==="
 echo ""
 HOST_COUNT=$(grep -v "^#" hosts.txt | grep -v "^$" | wc -l | tr -d ' ')
@@ -16,9 +17,9 @@ echo "Hosts: $HOST_COUNT" >> "$OUTPUT_FILE"
 echo "" >> "$OUTPUT_FILE"
 printf "IP\tHostname\tTotal\tUsed\tFree\n" >> "$OUTPUT_FILE"
 ONLINE=0; OFFLINE=0; TOTAL_RAM=0
-for host in $(grep -v "^#" hosts.txt | grep -v "^$"); do
+for host in "${ATOMATOR_HOSTS[@]}"; do
     echo -n "[$host] Collecting RAM... "
-    RESULT=$(SSHPASS="${SSH_PASSWORD:?Set SSH_PASSWORD}" sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$SSH_USER"@"$host" \
+    RESULT=$(remote_exec "$host" \
         'echo "$(hostname)|$(free -h | awk "/Mem:/{print \$2}")|$(free -h | awk "/Mem:/{print \$3}")|$(free -h | awk "/Mem:/{print \$4}")|$(free -m | awk "/Mem:/{print \$2}")"' 2>/dev/null) || true
     if [ -n "$RESULT" ]; then
         HNAME=$(echo "$RESULT" | cut -d'|' -f1); TOT=$(echo "$RESULT" | cut -d'|' -f2)

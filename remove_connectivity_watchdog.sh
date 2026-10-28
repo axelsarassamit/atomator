@@ -5,13 +5,15 @@ if [[ "${SITE_CONFIGURATION_CONFIRMED:-}" != "1" ]]; then
     exit 64
 fi
 set +e
-source ./credentials.conf 2>/dev/null || { echo "ERROR: credentials.conf not found!"; exit 1; }
+source "$(dirname -- "${BASH_SOURCE[0]}")/lib/runtime.sh"
+runtime_init "$@"
 echo "=== Remove Connectivity Watchdog ==="
 echo ""
-for host in $(grep -v "^#" hosts.txt | grep -v "^$"); do
+run_host() {
+    local host="$1"
     echo "[$host] Removing watchdog..."
-    SSHPASS="${SSH_PASSWORD:?Set SSH_PASSWORD}" sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$SSH_USER"@"$host" \
-        'echo '"$SSH_PASS"' | sudo -S bash -c "
+    remote_exec "$host" \
+        'sudo -n bash -ec "
         systemctl stop connectivity-watchdog.timer 2>/dev/null || true
         systemctl disable connectivity-watchdog.timer 2>/dev/null || true
         systemctl stop connectivity-watchdog.service 2>/dev/null || true
@@ -21,6 +23,7 @@ for host in $(grep -v "^#" hosts.txt | grep -v "^$"); do
         rm -rf /var/lib/connectivity-watchdog
         echo \"Watchdog removed\"
     "' 2>&1 && echo "[$host] OK" || echo "[$host] FAILED"
-done
+}
+fleet_run run_host
 echo ""
 echo "Done."

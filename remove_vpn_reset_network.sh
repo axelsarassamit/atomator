@@ -5,16 +5,18 @@ if [[ "${SITE_CONFIGURATION_CONFIRMED:-}" != "1" ]]; then
     exit 64
 fi
 set +e
-source ./credentials.conf 2>/dev/null || { echo "ERROR: credentials.conf not found!"; exit 1; }
+source "$(dirname -- "${BASH_SOURCE[0]}")/lib/runtime.sh"
+runtime_init "$@"
 echo "=== Remove VPN & Reset Network ==="
 echo "Removes all VPN packages/connections and resets to static IP with DNS."
 echo ""
-for host in $(grep -v "^#" hosts.txt | grep -v "^$"); do
+run_host() {
+    local host="$1"
     echo "[$host] Removing VPN + resetting..."
-    SSHPASS="${SSH_PASSWORD:?Set SSH_PASSWORD}" sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$SSH_USER"@"$host" \
-        'echo '"$SSH_PASS"' | sudo -S bash -c "
-        DEBIAN_FRONTEND=noninteractive apt-get remove -y --purge openvpn wireguard wireguard-tools network-manager-openvpn network-manager-vpnc network-manager-pptp network-manager-l2tp 2>/dev/null || true
-        apt-get autoremove -y 2>/dev/null || true
+    remote_exec "$host" \
+        'sudo -n bash -ec "
+        DEBIAN_FRONTEND=noninteractive apt-get remove -y --purge openvpn wireguard wireguard-tools network-manager-openvpn network-manager-vpnc network-manager-pptp network-manager-l2tp
+        apt-get autoremove -y
         for conn in \$(nmcli -t -f NAME,TYPE connection show | grep -E \"vpn|wireguard|tun|openvpn\" | cut -d: -f1); do
             nmcli connection delete \"\$conn\" 2>/dev/null || true
         done
@@ -31,6 +33,7 @@ for host in $(grep -v "^#" hosts.txt | grep -v "^$"); do
             echo \"VPN removed. Static IP: \$CURRENT_IP DNS: \$DNS\"
         fi
     "' 2>&1 && echo "[$host] OK" || echo "[$host] FAILED"
-done
+}
+fleet_run run_host
 echo ""
 echo "Done."

@@ -5,7 +5,8 @@ if [[ "${SITE_CONFIGURATION_CONFIRMED:-}" != "1" ]]; then
     exit 64
 fi
 set +e
-source ./credentials.conf 2>/dev/null || { echo "ERROR: credentials.conf not found!"; exit 1; }
+source "$(dirname -- "${BASH_SOURCE[0]}")/lib/runtime.sh"
+runtime_init "$@"
 echo "=== Check Disk Space ==="
 echo "Shows disk usage on all hosts. Warns if over 80%."
 echo ""
@@ -17,8 +18,8 @@ echo "Hosts: $HOST_COUNT" >> "$OUTPUT_FILE"
 echo "" >> "$OUTPUT_FILE"
 printf "IP\tHostname\tUsage%%\tTotal\tUsed\tFree\tStatus\n" >> "$OUTPUT_FILE"
 ONLINE=0; OFFLINE=0
-for host in $(grep -v "^#" hosts.txt | grep -v "^$"); do
-    RESULT=$(SSHPASS="${SSH_PASSWORD:?Set SSH_PASSWORD}" sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$SSH_USER"@"$host" \
+for host in "${ATOMATOR_HOSTS[@]}"; do
+    RESULT=$(remote_exec "$host" \
         'echo "$(hostname)|$(df -h / | awk "NR==2{print \$5}" | tr -d "%")|$(df -h / | awk "NR==2{print \$2}")|$(df -h / | awk "NR==2{print \$3}")|$(df -h / | awk "NR==2{print \$4}")"' 2>/dev/null) || true
     if [ -n "$RESULT" ]; then
         HNAME=$(echo "$RESULT" | cut -d'|' -f1); USAGE=$(echo "$RESULT" | cut -d'|' -f2)

@@ -5,18 +5,21 @@ if [[ "${SITE_CONFIGURATION_CONFIRMED:-}" != "1" ]]; then
     exit 64
 fi
 set +e
-source ./credentials.conf 2>/dev/null || { echo "ERROR: credentials.conf not found!"; exit 1; }
+source "$(dirname -- "${BASH_SOURCE[0]}")/lib/runtime.sh"
+runtime_init "$@"
 echo "=== Install Chromium ==="
 echo "Installs Chromium browser from apt repositories."
 echo ""
-for host in $(grep -v "^#" hosts.txt | grep -v "^$"); do
+run_host() {
+    local host="$1"
     echo "[$host] Installing Chromium..."
-    SSHPASS="${SSH_PASSWORD:?Set SSH_PASSWORD}" sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$SSH_USER"@"$host" \
-        'echo '"$SSH_PASS"' | sudo -S bash -c "
+    remote_exec "$host" \
+        'sudo -n bash -ec "
         DEBIAN_FRONTEND=noninteractive apt-get install -y chromium-browser 2>/dev/null || \
-        DEBIAN_FRONTEND=noninteractive apt-get install -y chromium 2>/dev/null || true
+        DEBIAN_FRONTEND=noninteractive apt-get install -y chromium
         echo \"Chromium installed\"
     "' 2>&1 && echo "[$host] OK" || echo "[$host] FAILED"
-done
+}
+fleet_run run_host
 echo ""
 echo "Done."

@@ -5,6 +5,7 @@ if [[ "${SITE_CONFIGURATION_CONFIRMED:-}" != "1" ]]; then
     exit 64
 fi
 set +e
+source "$(dirname -- "${BASH_SOURCE[0]}")/lib/runtime.sh"
 
 # Check if host was provided
 if [ -z "$1" ]; then
@@ -16,6 +17,8 @@ if [ -z "$1" ]; then
 fi
 
 HOST="$1"
+shift
+runtime_init --host "$HOST" "$@"
 
 echo "=== Live Monitoring Watchdog TEST on $HOST ==="
 echo "Press Ctrl+C to exit"
@@ -31,7 +34,7 @@ while true; do
     echo ""
 
     # Get status
-    STATUS=$(SSHPASS="${SSH_PASSWORD:?Set SSH_PASSWORD}" sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 exampleuser@"$HOST" "sudo -n /usr/local/bin/watchdog-test-status.sh 2>/dev/null" 2>/dev/null)
+    STATUS=$(remote_exec "$HOST" "sudo -n /usr/local/bin/watchdog-test-status.sh 2>/dev/null" 2>/dev/null)
 
     if [ -n "$STATUS" ]; then
         echo "$STATUS"

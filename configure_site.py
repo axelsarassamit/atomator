@@ -8,6 +8,7 @@ import re
 import shutil
 import subprocess
 import sys
+from lib.bundle import source_files, write_manifest
 
 ROOT = Path(__file__).resolve().parent
 TARGET = re.compile(r'(?<![\w.-])(?:[\w-]+\.)*example\.invalid\b|(?<![\d.])192\.0\.2\.\d{1,3}(?![\d.])|\b(?:exampleuser|examplestorageadmin)\b', re.I)
@@ -17,6 +18,8 @@ def tokens():
 
 def settings(path):
     data = json.loads(Path(path).read_text(encoding='utf-8'))
+    if not isinstance(data, dict):
+        raise ValueError('Configuration must be an object')
     replacements = data.get('replacements', {})
     required = tokens()
     if not isinstance(replacements, dict) or set(replacements) != set(required):
@@ -40,7 +43,7 @@ def configure(config, output):
     if output.exists() or output == ROOT or ROOT in output.parents:
         raise ValueError('Choose a new output directory outside the source checkout')
     output.mkdir(parents=True, mode=0o700)
-    for p in ROOT.rglob('*'):
+    for p in source_files(ROOT):
         relative = p.relative_to(ROOT)
         if any(part in ('.git', '__pycache__', '.github') for part in relative.parts) or p.is_dir(): continue
         if p.is_symlink(): raise ValueError('Source symlinks are not supported')
@@ -49,16 +52,18 @@ def configure(config, output):
         raw = p.read_bytes()
         try: text = raw.decode('utf-8')
         except UnicodeDecodeError: destination.write_bytes(raw); continue
-        if p.name not in ('configure_site.py', 'site-settings.example.json'):
+        if p.name not in ('configure_site.py', 'site-settings.example.json', 'LICENSE', 'NOTICE'):
             for key in sorted(replacements, key=len, reverse=True):
                 text = re.sub(r'(?<![\w.-])' + re.escape(key) + r'(?![\w.-])', lambda _: replacements[key], text)
         if p.suffix == '.sh':
             text = text.replace('\n', '\n# SITE_BUNDLE_CONFIGURED=1\n', 1)
         destination.write_text(text, encoding='utf-8', newline='\n')
         destination.chmod(0o700 if p.suffix == '.sh' else 0o600)
-    (output / '.site-configured.json').write_text(json.dumps({'configured': True, 'format': 1}))
+    shutil.copyfile(config, output / '.site-settings.json')
+    (output / '.site-settings.json').chmod(0o600)
     (output / 'run-configured.sh').write_text('#!/bin/bash\nset -euo pipefail\nexport SITE_CONFIGURATION_CONFIRMED=1\ncd -- "$(dirname -- "${BASH_SOURCE[0]}")"\nexec bash "$@"\n', encoding='utf-8', newline='\n')
     (output / 'run-configured.sh').chmod(0o700)
+    write_manifest(output)
     return output
 
 def main():
