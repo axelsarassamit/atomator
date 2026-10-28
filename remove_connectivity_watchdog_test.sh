@@ -5,14 +5,16 @@ if [[ "${SITE_CONFIGURATION_CONFIRMED:-}" != "1" ]]; then
     exit 64
 fi
 set +e
+source "$(dirname -- "${BASH_SOURCE[0]}")/lib/runtime.sh"
+runtime_init "$@"
 
 echo "=== Removing Connectivity Watchdog TEST MODE ==="
 echo ""
 
-for host in $(grep -v "^#" hosts.txt | grep -v "^$")
-do
+run_host() {
+    local host="$1"
     echo "Processing $host..."
-    SSHPASS="${SSH_PASSWORD:?Set SSH_PASSWORD}" sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 exampleuser@"$host" 'sudo -n bash -c "
+    remote_exec "$host" 'sudo -n bash -ec "
         echo \"Removing Connectivity Watchdog TEST MODE...\"
 
         # Stop and disable timer
@@ -47,5 +49,6 @@ do
     else
         echo "$host: FAILED"
     fi
-done
+}
+fleet_run run_host
 echo "All hosts processed."

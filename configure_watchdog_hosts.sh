@@ -4,6 +4,7 @@ if [[ "${SITE_CONFIGURATION_CONFIRMED:-}" != "1" ]]; then
     printf '%s\n' 'No site configured. Use configure_site.py with explicit site settings before running this script.' >&2
     exit 64
 fi
+source "$(dirname -- "${BASH_SOURCE[0]}")/lib/runtime.sh"
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC='\033[0m'
 CONFIG_FILE="watchdog_hosts.conf"
 if [ ! -f "$CONFIG_FILE" ]; then
@@ -15,7 +16,7 @@ DEFAULTS
     chmod 600 "$CONFIG_FILE"
     echo -e "${YELLOW}Created $CONFIG_FILE with defaults.${NC}"
 fi
-source "$CONFIG_FILE" 2>/dev/null
+runtime_watchdog_config --allow-empty || exit $?
 while true; do
     echo ""
     echo -e "${CYAN}=== Configure Watchdog Ping Hosts ===${NC}"
@@ -45,6 +46,9 @@ while true; do
             done
             ;;
         5)
+            for h in "$HOST_1" "$HOST_2" "$HOST_3"; do
+                [[ -z "$h" ]] || python3 "$ATOMATOR_ROOT/lib/settings.py" host "$h" >/dev/null || exit 64
+            done
             COUNT=0
             [ -n "$HOST_1" ] && COUNT=$((COUNT + 1))
             [ -n "$HOST_2" ] && COUNT=$((COUNT + 1))

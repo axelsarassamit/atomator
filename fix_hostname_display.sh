@@ -5,19 +5,20 @@ if [[ "${SITE_CONFIGURATION_CONFIRMED:-}" != "1" ]]; then
     exit 64
 fi
 set +e
-source ./credentials.conf 2>/dev/null || { echo "ERROR: credentials.conf not found!"; exit 1; }
+source "$(dirname -- "${BASH_SOURCE[0]}")/lib/runtime.sh"
+runtime_init "$@"
 echo "=== Fix Hostname Display ==="
 echo "Repairs conky hostname display: kills all instances, removes old"
 echo "configs, recreates clean config, and starts conky immediately."
 echo ""
-LOCAL_SCRIPT="/tmp/_fix_hostname_display.sh"
+LOCAL_SCRIPT="$ATOMATOR_RUN_DIR/payload.sh"
 REMOTE_SCRIPT="/tmp/_fix_hostname_display.sh"
 cat > "$LOCAL_SCRIPT" << 'SCRIPT'
 #!/bin/bash
 # Install conky if missing
 if ! command -v conky &>/dev/null; then
     echo "Conky not found, installing..."
-    DEBIAN_FRONTEND=noninteractive apt-get install -y conky-all 2>/dev/null || true
+    DEBIAN_FRONTEND=noninteractive apt-get install -y conky-all
 fi
 HOSTNAME_LABEL=$(hostname)
 FIXED=0
@@ -104,12 +105,12 @@ DESKTOP
 done
 echo "Fixed $FIXED user(s), hostname: $HOSTNAME_LABEL"
 SCRIPT
-for host in $(grep -v "^#" hosts.txt | grep -v "^$"); do
+run_host() {
+    local host="$1"
     echo "[$host] Fixing hostname display..."
-    SSHPASS="${SSH_PASSWORD:?Set SSH_PASSWORD}" sshpass -e scp -o StrictHostKeyChecking=no "$LOCAL_SCRIPT" "$SSH_USER"@"$host":"$REMOTE_SCRIPT" 2>/dev/null || true
-    SSHPASS="${SSH_PASSWORD:?Set SSH_PASSWORD}" sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$SSH_USER"@"$host" \
-        "echo $SSH_PASS | sudo -S bash $REMOTE_SCRIPT && rm -f $REMOTE_SCRIPT" 2>&1 && echo "[$host] OK" || echo "[$host] FAILED"
-done
+        remote_script "$host" "$LOCAL_SCRIPT" 2>&1 && echo "[$host] OK" || echo "[$host] FAILED"
+}
+fleet_run run_host
 rm -f "$LOCAL_SCRIPT"
 echo ""
 echo "Done. Hostname display has been fixed on all hosts."

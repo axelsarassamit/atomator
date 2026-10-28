@@ -4,6 +4,8 @@ if [[ "${SITE_CONFIGURATION_CONFIRMED:-}" != "1" ]]; then
     printf '%s\n' 'No site configured. Use configure_site.py with explicit site settings before running this script.' >&2
     exit 64
 fi
+source "$(dirname -- "${BASH_SOURCE[0]}")/lib/runtime.sh"
+FLEET_ARGS=("$@")
 BOLD='\033[1m'; DIM='\033[2m'
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; BLUE='\033[0;34m'
 CYAN='\033[0;36m'; MAGENTA='\033[0;35m'; WHITE='\033[1;37m'; NC='\033[0m'
@@ -26,8 +28,7 @@ get_online_count() {
     local online=0
     for host in $(grep -v "^#" hosts.txt 2>/dev/null | grep -v "^$" | head -5); do
         ping -c 1 -W 1 "$host" &>/dev/null && online=$((online + 1))
-    done &
-    wait
+    done
     echo "$online"
 }
 
@@ -95,8 +96,23 @@ run_script() {
     show_divider
     echo ""
     log_action "RUN: $1 ($2)"
-    if [ -f "./$1" ]; then bash "./$1"; else echo -e "  ${RED}Error: $1 not found!${NC}"; fi
-    log_action "DONE: $1"
+    local rc=0
+    if [ -f "./$1" ]; then
+        if grep -q 'runtime_init' "./$1"; then
+            bash "./$1" "${FLEET_ARGS[@]}" || rc=$?
+        else
+            bash "./$1" || rc=$?
+        fi
+    else
+        echo -e "  ${RED}Error: $1 not found!${NC}"
+        rc=127
+    fi
+    if ((rc)); then
+        echo "Action failed or was incomplete (exit $rc). See reports/ for per-host errors."
+        log_action "FAILED: $1 exit=$rc"
+    else
+        log_action "COMPLETED: $1 exit=0"
+    fi
     pause
 }
 
@@ -133,7 +149,7 @@ menu_updates() {
         show_item "6" "⏹️" " Shutdown all hosts" "power off machines"
         show_back
         show_prompt
-        read c
+        read -r c || return
         log_action "SUBMENU updates: choice=$c"
         case $c in
             1) run_script "update_all.sh" "Update All Systems" ;;
@@ -172,7 +188,7 @@ menu_network() {
         show_item "12" "🌍" "Check internet" "HTTP + ping test"
         show_back
         show_prompt
-        read c
+        read -r c || return
         log_action "SUBMENU network: choice=$c"
         case $c in
             1)  run_script "check_hosts.sh" "Check Host Status" ;;
@@ -215,7 +231,7 @@ menu_info() {
         show_item "11" "📈" "Fleet health summary" "RAM, disk, uptime stats"
         show_back
         show_prompt
-        read c
+        read -r c || return
         log_action "SUBMENU info: choice=$c"
         case $c in
             1)  run_script "collect_hardware_info.sh" "Collect Hardware Info" ;;
@@ -264,7 +280,7 @@ menu_software() {
         show_item "17" "🔧" "Fix hostname display" "repair/restart conky"
         show_back
         show_prompt
-        read c
+        read -r c || return
         log_action "SUBMENU software: choice=$c"
         case $c in
             1)  run_script "install_firefox.sh" "Install Firefox" ;;
@@ -300,7 +316,7 @@ menu_config() {
         show_item "3" "⚙️" " Restrict Chromium CPU" "limit to 50%"
         show_back
         show_prompt
-        read c
+        read -r c || return
         log_action "SUBMENU config: choice=$c"
         case $c in
             1) run_script "set_wallpaper.sh" "Set Wallpaper" ;;
@@ -329,7 +345,7 @@ menu_tools() {
         show_item "7" "🐌" "Fix slow sudo" "hostname in /etc/hosts"
         show_back
         show_prompt
-        read c
+        read -r c || return
         log_action "SUBMENU tools: choice=$c"
         case $c in
             1) run_script "run_remote_command.sh" "Run Custom Command" ;;
@@ -357,7 +373,7 @@ menu_files() {
         show_item "5" "📜" "View log" "last 30 menu actions"
         show_back
         show_prompt
-        read c
+        read -r c || return
         log_action "SUBMENU files: choice=$c"
         case $c in
             1) run_script "manage_hosts.sh" "Manage hosts.txt" ;;
@@ -398,7 +414,7 @@ while true; do
     show_item "8" "⬆️" " Update Scripts" "check for new version"
     show_exit
     show_prompt
-    read choice
+    read -r choice || break
     log_action "MAIN MENU: choice=$choice"
 
     case $choice in
@@ -414,8 +430,11 @@ while true; do
             echo -e "  ${GREEN}${BOLD}▶ Running:${NC} Update Scripts"
             echo ""
             log_action "RUN: update.sh"
-            if [ -f "./update.sh" ]; then bash ./update.sh; else echo -e "  ${RED}update.sh not found!${NC}"; fi
-            log_action "DONE: update.sh"
+            if [ -f "./update.sh" ]; then
+                if bash ./update.sh; then log_action 'COMPLETED: update.sh'; else log_action "FAILED: update.sh exit=$?"; fi
+            else
+                echo -e "  ${RED}update.sh not found!${NC}"
+            fi
             pause
             ;;
         666)
@@ -433,11 +452,11 @@ while true; do
                 show_item "4" "🎯" "Change ping hosts" ""
                 show_item "5" "⏱️" " Change timer" "default 72h"
                 echo ""
-                show_subsection "Additional server (prompts for credentials)"
+                show_subsection "Additional servers (prompts for hosts and credentials)"
                 show_item "6" "🖥️" " Install on extra server" "ad-hoc install"
                 show_back
                 show_prompt
-                read wc
+                read -r wc || return
                 log_action "SUBMENU 666: choice=$wc"
                 case $wc in
                     1) run_script "install_connectivity_watchdog.sh" "Install Watchdog" ;;

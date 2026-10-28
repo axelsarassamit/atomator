@@ -4,65 +4,29 @@ if [[ "${SITE_CONFIGURATION_CONFIRMED:-}" != "1" ]]; then
     printf '%s\n' 'No site configured. Use configure_site.py with explicit site settings before running this script.' >&2
     exit 64
 fi
-set +e
-source ./watchdog_hosts.conf 2>/dev/null || { echo "ERROR: watchdog_hosts.conf not found!"; exit 1; }
-
-RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC='\033[0m'
-
-echo -e "${CYAN}=== Install Connectivity Watchdog on Additional Server ===${NC}"
-echo "Ad-hoc install on a server that is NOT in hosts.txt."
-echo "Credentials are entered here and never stored on disk."
-echo ""
-echo "72-hour self-destruct if configured ping hosts are unreachable."
-echo ""
-
-# Prompt for one or more servers
-SERVERS=()
-echo "Enter server hostname(s) or IP(s). Empty line to finish:"
-while true; do
-    read -p "  Server: " s
-    [ -z "$s" ] && break
-    SERVERS+=("$s")
-done
-
-if [ ${#SERVERS[@]} -eq 0 ]; then
-    echo -e "${RED}No servers specified.${NC}"
-    exit 1
+source "$(dirname -- "${BASH_SOURCE[0]}")/lib/runtime.sh"
+if (($# == 0)); then
+    servers_file=$(mktemp) || exit 1
+    trap 'rm -f -- "$servers_file"' EXIT
+    echo 'Additional servers, one hostname or IP per line. Empty line to finish:'
+    while read -r -p 'Server: ' server && [[ -n "$server" ]]; do
+        printf '%s\n' "$server" >> "$servers_file"
+    done
+    [[ -s "$servers_file" ]] || exit 0
+    read -r -p 'SSH username [root]: ' SSH_USER || exit 0
+    SSH_USER=${SSH_USER:-root}
+    IFS= read -r -s -p 'SSH password (empty to use keys/agent): ' SSH_PASSWORD || exit 0
+    echo
+    runtime_init --hosts-file "$servers_file"
+    rm -f -- "$servers_file"
+else
+    runtime_init "$@"
 fi
-echo ""
-
-# Prompt for credentials
-read -p "  SSH username [default: root]: " SERVER_USER
-[ -z "$SERVER_USER" ] && SERVER_USER="root"
-read -s -p "  SSH password for ${SERVER_USER}: " SERVER_PASS
-echo ""
-if [ -z "$SERVER_PASS" ]; then
-echo "Credentials are supplied locally and are not displayed."
-    exit 1
-fi
-echo ""
-
-echo -e "${YELLOW}Watchdog ping targets (from watchdog_hosts.conf):${NC}"
-echo "  Host 1: ${HOST_1:-not set}"
-echo "  Host 2: ${HOST_2:-not set}"
-[ -n "$HOST_3" ] && echo "  Host 3: $HOST_3"
-echo ""
-if [ -z "$HOST_1" ] || [ -z "$HOST_2" ]; then
-    echo -e "${RED}At least HOST_1 and HOST_2 must be set in watchdog_hosts.conf.${NC}"
-    exit 1
-fi
-
-echo -e "${YELLOW}Will install watchdog on:${NC}"
-for s in "${SERVERS[@]}"; do echo "  - ${SERVER_USER}@${s}"; done
-echo ""
-echo -e "${RED}WARNING: This installs a REAL self-destruct mechanism!${NC}"
-echo -e "${RED}If a server loses connectivity for 72h it WIPES ITS DISKS and powers off.${NC}"
-read -p "Type 'yes' to proceed: " confirm
-if [ "$confirm" != "yes" ]; then echo "Cancelled."; unset SERVER_PASS; exit 0; fi
-echo ""
-
-LOCAL_SCRIPT="/tmp/_install_server_watchdog.sh"
-REMOTE_SCRIPT="/tmp/_install_server_watchdog.sh"
+runtime_watchdog_config || exit $?
+echo "Installs the existing 72-hour destructive watchdog on the selected servers."
+read -r -p "Install REAL self-destruct mechanism? (yes/no): " confirm
+[[ "$confirm" == yes ]] || exit 0
+LOCAL_SCRIPT="$ATOMATOR_RUN_DIR/payload.sh"
 cat > "$LOCAL_SCRIPT" << 'SCRIPT'
 #!/bin/bash
 mkdir -p /var/lib/connectivity-watchdog
@@ -153,27 +117,5 @@ sed -i "s/__HOST_1__/$HOST_1/g" "$LOCAL_SCRIPT"
 sed -i "s/__HOST_2__/$HOST_2/g" "$LOCAL_SCRIPT"
 sed -i "s/__HOST_3__/$HOST_3/g" "$LOCAL_SCRIPT"
 
-OK_COUNT=0; FAIL_COUNT=0
-for server in "${SERVERS[@]}"; do
-    echo "[$server] Installing watchdog..."
-    SSHPASS="${SSH_PASSWORD:?Set SSH_PASSWORD}" sshpass -e scp -o StrictHostKeyChecking=no "$LOCAL_SCRIPT" "$SERVER_USER"@"$server":"$REMOTE_SCRIPT" 2>/dev/null
-    if [ $? -ne 0 ]; then
-        echo -e "[$server] ${RED}FAILED${NC} (scp - check credentials/connectivity)"
-        FAIL_COUNT=$((FAIL_COUNT + 1))
-        continue
-    fi
-    if [ "$SERVER_USER" = "root" ]; then
-        REMOTE_CMD="bash $REMOTE_SCRIPT && rm -f $REMOTE_SCRIPT"
-    else
-        REMOTE_CMD="echo '$SERVER_PASS' | sudo -S bash $REMOTE_SCRIPT && rm -f $REMOTE_SCRIPT"
-    fi
-    SSHPASS="${SSH_PASSWORD:?Set SSH_PASSWORD}" sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$SERVER_USER"@"$server" \
-        "$REMOTE_CMD" 2>&1 \
-        && { echo -e "[$server] ${GREEN}OK${NC}"; OK_COUNT=$((OK_COUNT + 1)); } \
-        || { echo -e "[$server] ${RED}FAILED${NC}"; FAIL_COUNT=$((FAIL_COUNT + 1)); }
-done
-rm -f "$LOCAL_SCRIPT"
-unset SERVER_PASS
-echo ""
-echo -e "Installed on: ${GREEN}${OK_COUNT}${NC}  Failed: ${RED}${FAIL_COUNT}${NC}"
-echo "Done."
+install_host() { remote_script "$1" "$LOCAL_SCRIPT"; }
+fleet_run install_host

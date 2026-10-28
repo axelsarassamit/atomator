@@ -1,26 +1,40 @@
 # Independent deployment configuration
 
-Source scripts do not run until a site is explicitly configured. No endpoint, account,
-monitoring destination, domain join or VPN connection is selected automatically.
+Source scripts are inert until a site is explicitly configured. No endpoint,
+account, domain, monitoring destination or VPN connection is selected automatically.
 
-1. Run `python3 configure_site.py --schema > site-settings.json`.
-2. Fill every replacement with your own domain, realm, account and destination addresses.
-   `example.invalid` and `192.0.2.0/24` are inert documentation placeholders.
-   Read each script before choosing which administrative operation to run.
-3. Create a separate local bundle:
-   `python3 configure_site.py --config site-settings.json --output /path/to/new-bundle`.
-4. Run a selected operation with `/path/to/new-bundle/run-configured.sh script.sh`.
-   Creating a bundle alone makes no network connections and changes no system configuration.
+1. Download the complete repository.
+2. Run `python3 configure_site.py --schema > site-settings.json`.
+3. Fill every replacement with your own domain, realm, account and addresses.
+   Documentation addresses and `.invalid` names cannot be deployed.
+4. Create a separate local bundle:
+   `python3 configure_site.py --config site-settings.json --output /private/new-bundle`.
+5. Install with `sudo bash /private/new-bundle/run-configured.sh quick_install.sh`.
+6. Set `SSH_USER`, add your hosts, and independently verify SSH host keys in
+   `/remote_tools/known_hosts` before starting fleet actions.
 
-Supply any required SSH or domain password through the named environment variable at
-runtime. Passwords are not shipped in source or written by the configurator. Legacy generated
-SSH commands use `SSH_PASSWORD` for authentication and `sudo -n` for privilege elevation;
-configure the remote account's sudo policy independently. No automatic privilege grant is added.
-Do not commit local settings, credentials, host inventories or VPN profiles.
+Creating a bundle makes no connections. Its private `.site-settings.json` retains
+only the explicit replacement map for future source updates. SSH/domain passwords
+are not generated or added by the configurator. Do not put passwords in the map.
+The manifest records SHA-256 checksums of the deployable code and documentation.
 
-Provide your own `VPN_CONFIG_PATH` when using VPN setup; example files are never activated.
-The repository no longer includes deployed VPN profiles or bundled deployment logs/backups.
-Existing user installations, saved hosts, system credentials and historical releases are unchanged.
-Legal terms and attribution files remain authoritative.
+All current fleet scripts share credential parsing and SSH options. `SSH_PASSWORD`
+is the preferred optional password variable; `SSH_PASS` remains an authentication
+alias. SSH keys or an agent are supported. Credentials are parsed as data, never
+sourced as code. Administrative actions use `sudo -n`; configure privilege policy
+independently. Unknown or changed SSH host keys are rejected.
 
-Update and rollback inputs must also be configured bundles. Raw downloads and pre-separation local updaters are not executed automatically. Historical published archives remain unchanged.
+Do not commit local settings, credentials, host inventories, verified keys, reports
+or VPN profiles. Shared deployment archives exclude runtime data and the private
+replacement map. Configured source scripts can contain your site identifiers, so
+keep configured bundles private as well. Supply `VPN_CONFIG_PATH` where required.
+Legal terms and attribution files remain authoritative and are copied unchanged.
+
+Updates and rollbacks use configured directory bundles, not raw installer downloads.
+Installed code is staged and validated before activation, existing runtime data is
+preserved, and previous installations remain in a private sibling backup directory.
+Historical published archives and existing deployed systems are not modified by
+creating a bundle. The destructive watchdog remains an explicitly selected operation;
+its production payload and default timer have not changed.
+
+See [README.md](README.md) for authentication, preview/retry options and migration.

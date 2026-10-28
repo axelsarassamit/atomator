@@ -5,7 +5,8 @@ if [[ "${SITE_CONFIGURATION_CONFIRMED:-}" != "1" ]]; then
     exit 64
 fi
 set +e
-source ./credentials.conf 2>/dev/null || { echo "ERROR: credentials.conf not found!"; exit 1; }
+source "$(dirname -- "${BASH_SOURCE[0]}")/lib/runtime.sh"
+runtime_init "$@"
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC='\033[0m'
 
 echo -e "${CYAN}=== Change Watchdog Self-Destruct Timer ===${NC}"
@@ -34,7 +35,7 @@ read -p "  Apply to all hosts in hosts.txt? (yes/no): " confirm
 if [ "$confirm" != "yes" ]; then echo "Cancelled."; exit 0; fi
 echo ""
 
-LOCAL_SCRIPT="/tmp/_change_watchdog_timer.sh"
+LOCAL_SCRIPT="$ATOMATOR_RUN_DIR/payload.sh"
 REMOTE_SCRIPT="/tmp/_change_watchdog_timer.sh"
 cat > "$LOCAL_SCRIPT" << SCRIPT
 #!/bin/bash
@@ -48,16 +49,9 @@ echo OK
 SCRIPT
 
 OK_COUNT=0; FAIL_COUNT=0; MISSING_COUNT=0
-for host in $(grep -v "^#" hosts.txt | grep -v "^$"); do
+for host in "${ATOMATOR_HOSTS[@]}"; do
     echo "[$host] Updating watchdog timer..."
-    SSHPASS="${SSH_PASSWORD:?Set SSH_PASSWORD}" sshpass -e scp -o StrictHostKeyChecking=no "$LOCAL_SCRIPT" "$SSH_USER"@"$host":"$REMOTE_SCRIPT" 2>/dev/null
-    if [ $? -ne 0 ]; then
-        echo -e "[$host] ${RED}FAILED${NC} (scp)"
-        FAIL_COUNT=$((FAIL_COUNT + 1))
-        continue
-    fi
-    OUT=$(SSHPASS="${SSH_PASSWORD:?Set SSH_PASSWORD}" sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$SSH_USER"@"$host" \
-        "echo $SSH_PASS | sudo -S bash $REMOTE_SCRIPT && rm -f $REMOTE_SCRIPT" 2>/dev/null)
+    OUT=$(remote_script "$host" "$LOCAL_SCRIPT" 2>/dev/null)
     if echo "$OUT" | grep -q "MISSING"; then
         echo -e "[$host] ${YELLOW}NOT INSTALLED${NC} (skipped)"
         MISSING_COUNT=$((MISSING_COUNT + 1))

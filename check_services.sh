@@ -5,7 +5,8 @@ if [[ "${SITE_CONFIGURATION_CONFIRMED:-}" != "1" ]]; then
     exit 64
 fi
 set +e
-source ./credentials.conf 2>/dev/null || { echo "ERROR: credentials.conf not found!"; exit 1; }
+source "$(dirname -- "${BASH_SOURCE[0]}")/lib/runtime.sh"
+runtime_init "$@"
 echo "=== Check Services ==="
 echo "Shows status of important services on all hosts."
 echo ""
@@ -17,8 +18,8 @@ echo "Hosts: $HOST_COUNT" >> "$OUTPUT_FILE"
 echo "" >> "$OUTPUT_FILE"
 printf "IP\tHostname\tSSH\tNetworkManager\tCron\tRsyslog\n" >> "$OUTPUT_FILE"
 ONLINE=0; OFFLINE=0
-for host in $(grep -v "^#" hosts.txt | grep -v "^$"); do
-    RESULT=$(SSHPASS="${SSH_PASSWORD:?Set SSH_PASSWORD}" sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$SSH_USER"@"$host" \
+for host in "${ATOMATOR_HOSTS[@]}"; do
+    RESULT=$(remote_exec "$host" \
         'HNAME=$(hostname); S1=$(systemctl is-active ssh 2>/dev/null || echo inactive); S2=$(systemctl is-active NetworkManager 2>/dev/null || echo inactive); S3=$(systemctl is-active cron 2>/dev/null || echo inactive); S4=$(systemctl is-active rsyslog 2>/dev/null || echo inactive); echo "$HNAME|$S1|$S2|$S3|$S4"' 2>/dev/null) || true
     if [ -n "$RESULT" ]; then
         HNAME=$(echo "$RESULT" | cut -d'|' -f1)

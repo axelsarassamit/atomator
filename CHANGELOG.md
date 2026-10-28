@@ -1,5 +1,17 @@
 # Atomator - Changelog
 
+## v.02.10.00 (unreleased)
+- Install and update from validated configured bundles built from the canonical scripts.
+- Preserve runtime data and timestamped installation snapshots for rollback.
+- Share SSH authentication, verified host keys, timeouts, host selection and job results.
+- Add preview, bounded parallel jobs, failure exit codes and retry from failed-host lists.
+- Read credentials as data, accept the legacy SSH_PASS authentication alias, and use sudo -n.
+- Stream custom commands and password changes without interpolating secrets into shell commands.
+- Preserve saved credentials after password rotation and record per-host results for reconciliation.
+- Implement all seven previously missing menu actions and log action failures accurately.
+- Add offline installation, rollback, SSH and failure regression tests.
+- Preserve the existing destructive watchdog payload, timeout and action.
+
 ## v.01.00.00
 - Initial complete rewrite
 - 34 scripts with version system

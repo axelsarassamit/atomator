@@ -5,6 +5,8 @@ if [[ "${SITE_CONFIGURATION_CONFIRMED:-}" != "1" ]]; then
     exit 64
 fi
 set +e
+source "$(dirname -- "${BASH_SOURCE[0]}")/lib/runtime.sh"
+runtime_init "$@"
 
 echo "=== Installing Connectivity Watchdog (TEST MODE - No Wipe) ==="
 echo ""
@@ -16,7 +18,7 @@ echo "  - Use a 5-minute timeout for faster testing (instead of 72 hours)"
 echo ""
 
 # Write the remote script to a local temp file
-LOCAL_SCRIPT='/tmp/_install_watchdog_test.sh'
+LOCAL_SCRIPT="$ATOMATOR_RUN_DIR/payload.sh"
 REMOTE_SCRIPT='/tmp/_install_watchdog_test.sh'
 
 cat > "$LOCAL_SCRIPT" << 'SCRIPT'
@@ -231,22 +233,22 @@ echo ""
 echo "To test: Disconnect network and watch the countdown"
 SCRIPT
 
-for host in $(grep -v "^#" hosts.txt | grep -v "^$")
-do
+run_host() {
+    local host="$1"
     echo "Processing $host..."
 
     # Upload script to remote host
-    SSHPASS="${SSH_PASSWORD:?Set SSH_PASSWORD}" sshpass -e scp -o StrictHostKeyChecking=no "$LOCAL_SCRIPT" exampleuser@"$host":"$REMOTE_SCRIPT" || true
 
     # Execute with sudo and cleanup
-    SSHPASS="${SSH_PASSWORD:?Set SSH_PASSWORD}" sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 exampleuser@"$host" "sudo -n bash $REMOTE_SCRIPT && rm -f $REMOTE_SCRIPT" || true
+    remote_script "$host" "$LOCAL_SCRIPT"
 
     if [ $? -eq 0 ]; then
         echo "$host: SUCCESS"
     else
         echo "$host: FAILED"
     fi
-done
+}
+fleet_run run_host
 
 # Cleanup local temp file
 rm -f "$LOCAL_SCRIPT"

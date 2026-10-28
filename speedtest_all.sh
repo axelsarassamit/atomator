@@ -5,7 +5,8 @@ if [[ "${SITE_CONFIGURATION_CONFIRMED:-}" != "1" ]]; then
     exit 64
 fi
 set +e
-source ./credentials.conf 2>/dev/null || { echo "ERROR: credentials.conf not found!"; exit 1; }
+source "$(dirname -- "${BASH_SOURCE[0]}")/lib/runtime.sh"
+runtime_init "$@"
 echo "=== Speed Test All Hosts ==="
 echo ""
 HOST_COUNT=$(grep -v "^#" hosts.txt | grep -v "^$" | wc -l | tr -d ' ')
@@ -16,10 +17,10 @@ echo "Hosts: $HOST_COUNT" >> "$OUTPUT_FILE"
 echo "" >> "$OUTPUT_FILE"
 printf "IP\tHostname\tPing_ms\tDownload_Mbps\tUpload_Mbps\n" >> "$OUTPUT_FILE"
 ONLINE=0; OFFLINE=0
-for host in $(grep -v "^#" hosts.txt | grep -v "^$"); do
+for host in "${ATOMATOR_HOSTS[@]}"; do
     echo -n "[$host] Testing (takes a moment)... "
-    RESULT=$(SSHPASS="${SSH_PASSWORD:?Set SSH_PASSWORD}" sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$SSH_USER"@"$host" \
-        'echo '"$SSH_PASS"' | sudo -S bash -c "
+    RESULT=$(remote_exec "$host" \
+        'sudo -n bash -ec "
         which speedtest-cli >/dev/null 2>&1 || apt-get install -y speedtest-cli >/dev/null 2>&1
         HNAME=\$(hostname)
         RAW=\$(speedtest-cli --simple 2>/dev/null)
