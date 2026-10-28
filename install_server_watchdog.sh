@@ -15,7 +15,7 @@ if (($# == 0)); then
     [[ -s "$servers_file" ]] || exit 0
     read -r -p 'SSH username [root]: ' SSH_USER || exit 0
     SSH_USER=${SSH_USER:-root}
-    read -r -s -p 'SSH password (empty to use keys/agent): ' SSH_PASSWORD || exit 0
+    IFS= read -r -s -p 'SSH password (empty to use keys/agent): ' SSH_PASSWORD || exit 0
     echo
     runtime_init --hosts-file "$servers_file"
     rm -f -- "$servers_file"

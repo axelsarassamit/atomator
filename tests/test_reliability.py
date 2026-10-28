@@ -278,7 +278,7 @@ print('test-host')
         self.assertNotIn('sudo -S', call['args'][-1])
 
     def test_password_rotation_preserves_saved_credentials_on_partial_failure(self):
-        secret = '''a'"$()`\\&/;| password'''
+        secret = '''  a'"$()`\\&/;| password  '''
         original = (self.source / 'credentials.conf').read_bytes()
         result = self.run_action('change_password.sh', input=secret + '\n' + secret + '\nyes\n')
         self.assertEqual(result.returncode, 1, result.stderr)

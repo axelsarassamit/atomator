@@ -5,9 +5,9 @@ if [[ "${SITE_CONFIGURATION_CONFIRMED:-}" != 1 ]]; then
 fi
 source "$(dirname -- "${BASH_SOURCE[0]}")/lib/runtime.sh"
 runtime_init "$@"
-read -r -s -p 'New password: ' NEW_PASS || exit 0
+IFS= read -r -s -p 'New password: ' NEW_PASS || exit 0
 echo
-read -r -s -p 'Confirm password: ' CONFIRM_PASS || exit 0
+IFS= read -r -s -p 'Confirm password: ' CONFIRM_PASS || exit 0
 echo
 [[ -n "$NEW_PASS" && "$NEW_PASS" == "$CONFIRM_PASS" && "$NEW_PASS" != *:* ]] || { echo 'Passwords must match, be nonempty and contain no colon.' >&2; exit 64; }
 read -r -p 'Change password on the selected hosts? (yes/no): ' answer || exit 0
